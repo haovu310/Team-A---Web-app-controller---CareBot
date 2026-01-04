@@ -80,21 +80,38 @@ function stop() {
 }
 
 // 5. Button Bindings
+var PUBLISH_RATE_MS = 100; // Send command every 100ms while held
+
 function bindBtn(id, lx, ly, az) {
     const btn = document.getElementById(id);
     if (!btn) return;
 
-    // Mouse/Touch Down
+    let intervalId = null;
+
+    // Mouse/Touch Down - Start continuous publishing
     const start = (e) => {
         e.preventDefault(); // Prevent scrolling on mobile
         btn.classList.add('active');
+
+        // Send immediately
         publishTwist(lx, ly, az);
+
+        // Then send continuously
+        intervalId = setInterval(() => {
+            publishTwist(lx, ly, az);
+        }, PUBLISH_RATE_MS);
     };
 
-    // Release
+    // Release - Stop publishing
     const end = (e) => {
         e.preventDefault();
         btn.classList.remove('active');
+
+        // Clear the interval
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
         stop();
     };
 
