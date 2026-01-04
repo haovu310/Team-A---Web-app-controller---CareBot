@@ -106,11 +106,17 @@ function bindBtn(id, lx, ly, az) {
     btn.addEventListener('touchend', end);
 }
 
-// Bind D-Pad
+// Bind D-Pad (Cardinal)
 bindBtn('forward', 1, 0, 0);
 bindBtn('backward', -1, 0, 0);
 bindBtn('left', 0, 1, 0);
 bindBtn('right', 0, -1, 0);
+
+// Bind D-Pad (Diagonal)
+bindBtn('diag_for_left', 1, 1, 0);    // Forward-Left
+bindBtn('diag_for_right', 1, -1, 0);  // Forward-Right
+bindBtn('diag_back_left', -1, 1, 0);  // Backward-Left
+bindBtn('diag_back_right', -1, -1, 0); // Backward-Right
 
 // Rotate (Spin)
 bindBtn('rotateL', 0, 0, 1);

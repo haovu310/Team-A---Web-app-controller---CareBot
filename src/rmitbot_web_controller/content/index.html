@@ -49,16 +49,18 @@
             <div class="movement-section">
                 <h2>Manual Drive</h2>
                 <div class="d-pad">
-                    <!-- Forward -->
+                    <!-- Row 1: Diagonals + Forward -->
+                    <button class="btn-ctrl btn-diag" id="diag_for_left">↖</button>
                     <button class="btn-ctrl" id="forward"><i class="fas fa-chevron-up"></i></button>
-                    <!-- Left -->
+                    <button class="btn-ctrl btn-diag" id="diag_for_right">↗</button>
+                    <!-- Row 2: Left, Stop, Right -->
                     <button class="btn-ctrl" id="left"><i class="fas fa-chevron-left"></i></button>
-                    <!-- Stop -->
                     <button class="btn-ctrl" id="stop">STOP</button>
-                    <!-- Right -->
                     <button class="btn-ctrl" id="right"><i class="fas fa-chevron-right"></i></button>
-                    <!-- Back -->
+                    <!-- Row 3: Diagonals + Backward -->
+                    <button class="btn-ctrl btn-diag" id="diag_back_left">↙</button>
                     <button class="btn-ctrl" id="backward"><i class="fas fa-chevron-down"></i></button>
+                    <button class="btn-ctrl btn-diag" id="diag_back_right">↘</button>
                 </div>
 
                 <div class="rotation-group">

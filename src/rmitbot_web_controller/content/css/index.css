@@ -182,10 +182,12 @@ input[type=range] {
 /* D-Pad */
 .d-pad {
     display: grid;
+    grid-template-columns: repeat(3, 70px);
+    grid-template-rows: repeat(3, 70px);
     grid-template-areas:
-        ".     fwd   ."
-        "left  stop  right"
-        ".     back  .";
+        "dfl fwd dfr"
+        "left stop right"
+        "dbl back dbr";
     gap: 10px;
     justify-content: center;
     margin: 1rem 0;
@@ -212,6 +214,27 @@ input[type=range] {
     background: var(--primary-color);
     color: white;
     transform: scale(0.95);
+}
+
+.btn-diag {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+}
+
+#diag_for_left {
+    grid-area: dfl;
+}
+
+#diag_for_right {
+    grid-area: dfr;
+}
+
+#diag_back_left {
+    grid-area: dbl;
+}
+
+#diag_back_right {
+    grid-area: dbr;
 }
 
 #forward {
