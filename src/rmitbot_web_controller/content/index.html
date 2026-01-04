@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareBot Control Station</title>
+    <link rel="stylesheet" href="css/index.css?v=2">
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+    <!-- Use FontAwesome for icons (optional, or just unicode) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <header>
+        <div class="brand">
+            <i class="fas fa-heartbeat" style="font-size: 24px; color: #FF69B4;"></i>
+            <h1>CareBot Control</h1>
+        </div>
+        <div class="status-panel">
+            <span id="connection-text">Disconnected</span>
+            <div id="status-dot" class="status-dot disconnected"></div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Column: Vision -->
+        <section class="camera-card">
+            <div class="stream-wrapper">
+                <!-- Replace src with actual stream URL later -->
+                <img src="" id="streaming" alt="Waiting for Camera Signal...">
+                <div class="camera-overlay">Live Feed</div>
+            </div>
+        </section>
+
+        <!-- Right Column: Control -->
+        <section class="controls-card">
+
+            <div class="speed-section">
+                <h2>Speed Control</h2>
+                <div class="speed-group">
+                    <i class="fas fa-tortoise" style="color: #888;"></i>
+                    <input type="range" id="speed-slider" min="0" max="100" value="50">
+                    <i class="fas fa-hare" style="color: #888;"></i>
+                    <span class="speed-val" id="speed-display">0.5</span> <span style="font-size:0.8rem">m/s</span>
+                </div>
+            </div>
+
+            <div class="movement-section">
+                <h2>Manual Drive</h2>
+                <div class="d-pad">
+                    <!-- Forward -->
+                    <button class="btn-ctrl" id="forward"><i class="fas fa-chevron-up"></i></button>
+                    <!-- Left -->
+                    <button class="btn-ctrl" id="left"><i class="fas fa-chevron-left"></i></button>
+                    <!-- Stop -->
+                    <button class="btn-ctrl" id="stop">STOP</button>
+                    <!-- Right -->
+                    <button class="btn-ctrl" id="right"><i class="fas fa-chevron-right"></i></button>
+                    <!-- Back -->
+                    <button class="btn-ctrl" id="backward"><i class="fas fa-chevron-down"></i></button>
+                </div>
+
+                <div class="rotation-group">
+                    <button class="btn-calm" id="rotateL"><i class="fas fa-undo"></i> Spin Left</button>
+                    <button class="btn-calm" id="rotateR">Spin Right <i class="fas fa-redo"></i></button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        CareBot System v1.0 | Hospital Unit A | Shortcuts: WASD = Move, Space = E-Stop
+    </footer>
+
+    <script src="js/index.js?v=3"></script>
+</body>
+
+</html>
