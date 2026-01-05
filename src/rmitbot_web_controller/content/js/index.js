@@ -300,30 +300,107 @@ function initMap() {
         robotMarker.rotation = -angle * 180 / Math.PI;
     });
 
-    // Add Click Handler for setting goals
+    // ========================================
+    // Goal Setting with Drag-to-Orient
+    // ========================================
+    var goalMarker = null;
+    var isSettingGoal = false;
+    var goalStartCoords = null;
+
+    // Helper: Convert yaw angle to quaternion
+    function yawToQuaternion(yaw) {
+        return {
+            x: 0,
+            y: 0,
+            z: Math.sin(yaw / 2),
+            w: Math.cos(yaw / 2)
+        };
+    }
+
+    // Create goal marker (green arrow)
+    goalMarker = new ROS2D.NavigationArrow({
+        size: 0.6,
+        strokeSize: 0.08,
+        fillColor: createjs.Graphics.getRGB(46, 204, 113, 0.9), // Green
+        pulse: false
+    });
+    goalMarker.visible = false;
+    viewer.scene.addChild(goalMarker);
+
+    // Mouse/Touch Down - Start goal placement
     viewer.scene.addEventListener('stagemousedown', function (event) {
         if (!document.getElementById('mode-switch').checked) return;
 
         var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
+        goalStartCoords = { x: coords.x, y: -coords.y }; // Store in ROS coords
+
+        // Show goal marker at click position
+        goalMarker.x = coords.x;
+        goalMarker.y = coords.y;
+        goalMarker.rotation = 0;
+        goalMarker.visible = true;
+        isSettingGoal = true;
+
+        setNavStatus('ready', 'Drag to set orientation...');
+    });
+
+    // Mouse Move - Update orientation preview
+    viewer.scene.addEventListener('stagemousemove', function (event) {
+        if (!isSettingGoal || !goalStartCoords) return;
+
+        var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
+
+        // Calculate angle from start position to current mouse
+        var dx = coords.x - goalMarker.x;
+        var dy = coords.y - goalMarker.y;
+        var angle = Math.atan2(-dy, dx); // Negative Y for screen coords
+
+        // Update marker rotation (degrees for CreateJS)
+        goalMarker.rotation = -angle * 180 / Math.PI;
+    });
+
+    // Mouse Up - Send goal with orientation
+    viewer.scene.addEventListener('stagemouseup', function (event) {
+        if (!isSettingGoal || !goalStartCoords) return;
+
+        var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
+
+        // Calculate final orientation
+        var dx = coords.x - goalMarker.x;
+        var dy = coords.y - goalMarker.y;
+        var yaw = Math.atan2(-dy, dx); // Angle in radians
+
+        // If user didn't drag (just clicked), default to forward (0 rad)
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 0.1) {
+            yaw = 0; // Default forward
+        }
+
+        var orientation = yawToQuaternion(yaw);
 
         var pose = new ROSLIB.Message({
             header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
             pose: {
-                position: { x: coords.x, y: -coords.y, z: 0.0 },
-                orientation: { x: 0, y: 0, z: 0, w: 1.0 }
+                position: { x: goalStartCoords.x, y: goalStartCoords.y, z: 0.0 },
+                orientation: orientation
             }
         });
 
-        console.log("Creating Navigation Goal:", coords.x, -coords.y);
+        console.log("Navigation Goal:", goalStartCoords.x.toFixed(2), goalStartCoords.y.toFixed(2), "yaw:", (yaw * 180 / Math.PI).toFixed(1) + "°");
         goalTopic.publish(pose);
         setNavStatus('navigating', 'Navigating to goal...');
 
-        // Auto-detect goal reached (simple timeout fallback)
+        // Keep goal marker visible for reference
+        isSettingGoal = false;
+        goalStartCoords = null;
+
+        // Auto-detect goal reached (fallback)
         setTimeout(() => {
             if (isNavigating) {
                 setNavStatus('success', 'Goal reached!');
+                goalMarker.visible = false;
             }
-        }, 15000); // 15 second timeout
+        }, 15000);
     });
 }
 
