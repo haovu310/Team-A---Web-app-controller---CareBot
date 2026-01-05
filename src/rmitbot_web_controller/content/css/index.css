@@ -51,6 +51,86 @@ header {
     color: var(--primary-dark);
 }
 
+/* Mode Switch */
+.mode-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    display: none;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: var(--primary-color);
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+/* Map Panel */
+.hidden {
+    display: none !important;
+}
+
+#nav-map {
+    width: 100%;
+    height: 400px;
+    background: #000;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+#nav-map canvas {
+    background: #222;
+}
+
+.instruction {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Status Panel */
 .status-panel {
     display: flex;
     align-items: center;

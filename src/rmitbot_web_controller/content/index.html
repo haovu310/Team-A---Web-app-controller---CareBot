@@ -46,7 +46,22 @@
                 </div>
             </div>
 
-            <div class="movement-section">
+            <div class="mode-toggle">
+                <span>Manual</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-switch">
+                    <span class="slider round"></span>
+                </label>
+                <span>Auto</span>
+            </div>
+
+            <div id="map-panel" class="hidden">
+                <h2>Navigation Map</h2>
+                <div id="nav-map"></div>
+                <p class="instruction">Click on map to send goal</p>
+            </div>
+
+            <div id="manual-panel" class="movement-section">
                 <h2>Manual Drive</h2>
                 <div class="d-pad">
                     <!-- Row 1: Diagonals + Forward -->
@@ -75,6 +90,10 @@
         CareBot System v1.0 | Hospital Unit A | Shortcuts: WASD = Move, Space = E-Stop
     </footer>
 
+    <script src="js/easeljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
+    <script src="js/roslib.min.js"></script>
+    <script src="js/ros2d.min.js"></script>
     <script src="js/index.js?v=3"></script>
 </body>
 

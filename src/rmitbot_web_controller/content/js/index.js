@@ -196,3 +196,82 @@ function updateKeyDrive() {
         publishTwist(lx, ly, az);
     }
 }
+
+// ==========================
+// 7. Navigation & Map Logic
+// ==========================
+var viewer = null;
+var gridClient = null;
+
+function initMap() {
+    if (viewer) return; // Already init
+
+    // Create the main viewer.
+    viewer = new ROS2D.Viewer({
+        divID: 'nav-map',
+        width: 400,
+        height: 400
+    });
+
+    // Setup the map client.
+    gridClient = new ROS2D.OccupancyGridClient({
+        ros: ros,
+        rootObject: viewer.scene,
+        continuous: true // Track map updates
+    });
+
+    // Scale the viewer to fit the map
+    gridClient.on('change', function () {
+        viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
+        // Shift map so it's centered
+        viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+    });
+
+    // Setup Goal Publisher
+    var goalTopic = new ROSLIB.Topic({
+        ros: ros,
+        name: '/goal_pose',
+        messageType: 'geometry_msgs/PoseStamped'
+    });
+
+    // Add Click Handler
+    viewer.scene.addEventListener('stagemousedown', function (event) {
+        if (!document.getElementById('mode-switch').checked) return;
+
+        var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
+        // coords are in meters in the map frame
+
+        var pose = new ROSLIB.Message({
+            header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
+            pose: {
+                position: { x: coords.x, y: coords.y, z: 0.0 },
+                orientation: { x: 0, y: 0, z: 0, w: 1.0 }
+            }
+        });
+
+        console.log("Creating Navigation Goal:", coords.x, coords.y);
+        goalTopic.publish(pose);
+    });
+}
+
+// Mode Switching
+const modeSwitch = document.getElementById('mode-switch');
+const manualPanel = document.getElementById('manual-panel');
+const mapPanel = document.getElementById('map-panel');
+
+if (modeSwitch) {
+    modeSwitch.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            // Auto Mode
+            console.log("Switched to Auto Mode");
+            manualPanel.classList.add('hidden');
+            mapPanel.classList.remove('hidden');
+            initMap(); // Init map only when needed to save resources
+        } else {
+            // Manual Mode
+            console.log("Switched to Manual Mode");
+            manualPanel.classList.remove('hidden');
+            mapPanel.classList.add('hidden');
+        }
+    });
+}
