@@ -202,6 +202,42 @@ function updateKeyDrive() {
 // ==========================
 var viewer = null;
 var gridClient = null;
+var robotMarker = null;
+var goalTopic = null;
+var isNavigating = false;
+
+// Status UI Elements
+const navStatusIcon = document.getElementById('nav-status-icon');
+const navStatusText = document.getElementById('nav-status-text');
+const cancelBtn = document.getElementById('cancel-nav');
+
+function setNavStatus(status, message) {
+    if (!navStatusIcon || !navStatusText) return;
+
+    navStatusIcon.className = ''; // Reset classes
+    switch (status) {
+        case 'ready':
+            navStatusIcon.classList.add('ready');
+            navStatusIcon.innerText = '●';
+            break;
+        case 'navigating':
+            navStatusIcon.classList.add('navigating');
+            navStatusIcon.innerText = '◉';
+            isNavigating = true;
+            break;
+        case 'success':
+            navStatusIcon.classList.add('success');
+            navStatusIcon.innerText = '✓';
+            isNavigating = false;
+            break;
+        case 'failed':
+            navStatusIcon.classList.add('failed');
+            navStatusIcon.innerText = '✗';
+            isNavigating = false;
+            break;
+    }
+    navStatusText.innerText = message || status;
+}
 
 function initMap() {
     if (viewer) return; // Already init
@@ -223,34 +259,94 @@ function initMap() {
     // Scale the viewer to fit the map
     gridClient.on('change', function () {
         viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
-        // Shift map so it's centered
         viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
     });
 
     // Setup Goal Publisher
-    var goalTopic = new ROSLIB.Topic({
+    goalTopic = new ROSLIB.Topic({
         ros: ros,
         name: '/goal_pose',
         messageType: 'geometry_msgs/PoseStamped'
     });
 
-    // Add Click Handler
+    // Subscribe to robot pose (TF)
+    var tfClient = new ROSLIB.TFClient({
+        ros: ros,
+        angularThres: 0.01,
+        transThres: 0.01,
+        rate: 10.0,
+        fixedFrame: 'map'
+    });
+
+    // Create robot marker (arrow shape)
+    robotMarker = new ROS2D.NavigationArrow({
+        size: 0.5,
+        strokeSize: 0.05,
+        fillColor: createjs.Graphics.getRGB(255, 105, 180, 0.9), // Pink
+        pulse: false
+    });
+    robotMarker.visible = false;
+    viewer.scene.addChild(robotMarker);
+
+    // Update robot marker position from TF
+    tfClient.subscribe('base_footprint', function (tf) {
+        robotMarker.visible = true;
+        robotMarker.x = tf.translation.x;
+        robotMarker.y = -tf.translation.y; // ROS2D uses inverted Y
+
+        // Convert quaternion to angle
+        var q = tf.rotation;
+        var angle = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+        robotMarker.rotation = -angle * 180 / Math.PI;
+    });
+
+    // Add Click Handler for setting goals
     viewer.scene.addEventListener('stagemousedown', function (event) {
         if (!document.getElementById('mode-switch').checked) return;
 
         var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
-        // coords are in meters in the map frame
 
         var pose = new ROSLIB.Message({
             header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
             pose: {
-                position: { x: coords.x, y: coords.y, z: 0.0 },
+                position: { x: coords.x, y: -coords.y, z: 0.0 },
                 orientation: { x: 0, y: 0, z: 0, w: 1.0 }
             }
         });
 
-        console.log("Creating Navigation Goal:", coords.x, coords.y);
+        console.log("Creating Navigation Goal:", coords.x, -coords.y);
         goalTopic.publish(pose);
+        setNavStatus('navigating', 'Navigating to goal...');
+
+        // Auto-detect goal reached (simple timeout fallback)
+        setTimeout(() => {
+            if (isNavigating) {
+                setNavStatus('success', 'Goal reached!');
+            }
+        }, 15000); // 15 second timeout
+    });
+}
+
+// Cancel Navigation
+if (cancelBtn) {
+    cancelBtn.addEventListener('click', function () {
+        if (!goalTopic) return;
+
+        // Publish empty goal to cancel (Nav2 behavior)
+        var cancelTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: '/navigate_to_pose/_action/cancel',
+            messageType: 'action_msgs/CancelGoal'
+        });
+
+        // Send cancel request
+        cancelTopic.publish(new ROSLIB.Message({}));
+
+        // Also stop the robot immediately
+        stop();
+
+        setNavStatus('ready', 'Navigation cancelled');
+        console.log("Navigation cancelled by user");
     });
 }
 
@@ -267,6 +363,7 @@ if (modeSwitch) {
             manualPanel.classList.add('hidden');
             mapPanel.classList.remove('hidden');
             initMap(); // Init map only when needed to save resources
+            setNavStatus('ready', 'Ready');
         } else {
             // Manual Mode
             console.log("Switched to Manual Mode");
@@ -275,3 +372,4 @@ if (modeSwitch) {
         }
     });
 }
+

@@ -130,6 +130,81 @@ input:checked+.slider:before {
     margin-top: 0.5rem;
 }
 
+/* Navigation Controls */
+.nav-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-color);
+    border-radius: 10px;
+}
+
+.nav-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+#nav-status-icon {
+    font-size: 1.2rem;
+}
+
+#nav-status-icon.ready {
+    color: var(--text-muted);
+}
+
+#nav-status-icon.navigating {
+    color: #3498db;
+    animation: pulse 1s infinite;
+}
+
+#nav-status-icon.success {
+    color: var(--success);
+}
+
+#nav-status-icon.failed {
+    color: var(--danger);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.btn-cancel {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--danger);
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-cancel:hover {
+    background: #e55039;
+    transform: scale(1.02);
+}
+
+.btn-cancel:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
 /* Status Panel */
 .status-panel {
     display: flex;
