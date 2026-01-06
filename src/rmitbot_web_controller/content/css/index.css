@@ -322,12 +322,20 @@ footer {
     font-weight: bold;
     padding: 2px 8px;
     border-radius: 10px;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
 
-.mode-value.mode-idle { background: #636E72; }
-.mode-value.mode-manual { background: #00b894; }
-.mode-value.mode-auto { background: #0984e3; }
+.mode-value.mode-idle {
+    background: #636E72;
+}
+
+.mode-value.mode-manual {
+    background: #00b894;
+}
+
+.mode-value.mode-auto {
+    background: #0984e3;
+}
 
 /* Automation Section */
 .automation-section {
@@ -354,7 +362,10 @@ footer {
     color: var(--text-muted);
 }
 
-.btn-mode:hover { border-color: var(--primary-dark); }
+.btn-mode:hover {
+    border-color: var(--primary-dark);
+}
+
 .btn-mode.active {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -390,7 +401,7 @@ footer {
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .btn-waypoint:hover {
@@ -415,7 +426,9 @@ footer {
     color: var(--text-color);
 }
 
-.nav-status-header i { color: var(--primary-dark); }
+.nav-status-header i {
+    color: var(--primary-dark);
+}
 
 .nav-progress-bar {
     height: 6px;
@@ -446,4 +459,36 @@ footer {
 
 .btn-cancel:hover {
     transform: scale(1.02);
+}
+
+/* Map Section */
+.map-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1rem;
+    min-height: 300px;
+}
+
+.map-wrapper {
+    width: 100%;
+    height: 300px;
+    /* specific height for canvas */
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#map-canvas {
+    width: 100%;
+    height: 100%;
 }

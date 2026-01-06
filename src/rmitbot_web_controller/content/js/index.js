@@ -385,3 +385,51 @@ document.querySelectorAll('.btn-waypoint').forEach(btn => {
 
 // Initialize in IDLE mode
 setMode('IDLE');
+
+// === MAP VISUALIZATION ===
+var viewer = null;
+var gridClient = null;
+
+function initMap() {
+    // Create the viewer
+    // We assume the map-canvas div is present
+    // We get dimensions from the wrapper
+    const mapDiv = document.getElementById('map-canvas');
+    const width = mapDiv.clientWidth;
+    const height = mapDiv.clientHeight;
+
+    if (!viewer) {
+        viewer = new ROS2D.Viewer({
+            divID: 'map-canvas',
+            width: width,
+            height: height,
+            background: '#efefef' // matches css background roughly
+        });
+    }
+
+    // Setup the map client
+    if (!gridClient) {
+        gridClient = new ROS2D.OccupancyGridClient({
+            ros: ros,
+            rootObject: viewer.scene,
+            continuous: true, // track map updates
+            topic: '/map'
+        });
+
+        // Scale the viewer to fit map when it loads
+        gridClient.on('change', function () {
+            viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
+            viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+            // Optionally zoom out a bit or center better
+        });
+    }
+}
+
+// Hook into connection
+// We already have ros.on('connection', ...) at the top. 
+// We can add another listener or modify the existing one. 
+// Since we can have multiple listeners, adding one here is cleaner.
+ros.on('connection', function () {
+    setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
+});
+
