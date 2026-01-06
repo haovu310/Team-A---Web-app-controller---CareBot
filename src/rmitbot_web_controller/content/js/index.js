@@ -1,8 +1,9 @@
 // CareBot Controller Logic
 
 // 1. ROS Connection
+var rosHost = window.location.hostname || 'localhost';
 var ros = new ROSLIB.Ros({
-    url: 'ws://' + window.location.hostname + ':9090'
+    url: 'ws://' + rosHost + ':9090'
 });
 
 // UI Elements
