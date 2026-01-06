@@ -303,3 +303,147 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* === Automation Features === */
+
+/* Mode Indicator */
+.mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.mode-value {
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.2);
+}
+
+.mode-value.mode-idle { background: #636E72; }
+.mode-value.mode-manual { background: #00b894; }
+.mode-value.mode-auto { background: #0984e3; }
+
+/* Automation Section */
+.automation-section {
+    border-bottom: 2px solid var(--bg-color);
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.mode-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.btn-mode {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: var(--bg-color);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+}
+
+.btn-mode:hover { border-color: var(--primary-dark); }
+.btn-mode.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+/* Waypoints */
+.waypoints-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--bg-color);
+    border-radius: 12px;
+}
+
+.waypoints-section h3 {
+    margin: 0 0 0.8rem 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.waypoint-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.btn-waypoint {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: white;
+    color: var(--text-color);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-waypoint:hover {
+    background: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+/* Navigation Status */
+.nav-status {
+    background: var(--bg-color);
+    border-radius: 10px;
+    padding: 12px;
+    margin: 1rem 0;
+}
+
+.nav-status-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.nav-status-header i { color: var(--primary-dark); }
+
+.nav-progress-bar {
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.nav-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #00b894, #55E6C1);
+    transition: width 0.3s ease;
+}
+
+/* Cancel Button */
+.btn-cancel {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+    margin-top: 10px;
+}
+
+.btn-cancel:hover {
+    transform: scale(1.02);
+}

@@ -17,6 +17,10 @@
             <i class="fas fa-heartbeat" style="font-size: 24px; color: #FF69B4;"></i>
             <h1>CareBot Control</h1>
         </div>
+        <div class="mode-indicator" id="mode-indicator">
+            <span class="mode-label">Mode:</span>
+            <span class="mode-value mode-idle" id="mode-value">IDLE</span>
+        </div>
         <div class="status-panel">
             <span id="connection-text">Disconnected</span>
             <div id="status-dot" class="status-dot disconnected"></div>
@@ -35,6 +39,39 @@
 
         <!-- Right Column: Control -->
         <section class="controls-card">
+
+            <div class="automation-section">
+                <h2>Navigation Mode</h2>
+                <div class="mode-buttons">
+                    <button class="btn-mode active" id="mode-idle">IDLE</button>
+                    <button class="btn-mode" id="mode-manual">MANUAL</button>
+                    <button class="btn-mode" id="mode-auto">AUTO</button>
+                </div>
+                
+                <div class="waypoints-section" id="waypoints-section" style="display: none;">
+                    <h3>Quick Destinations</h3>
+                    <div class="waypoint-buttons">
+                        <button class="btn-waypoint" data-x="1.0" data-y="0.0" data-yaw="0">Table A</button>
+                        <button class="btn-waypoint" data-x="2.0" data-y="1.0" data-yaw="1.57">Table B</button>
+                        <button class="btn-waypoint" data-x="0.0" data-y="2.0" data-yaw="3.14">Station</button>
+                        <button class="btn-waypoint" data-x="0.0" data-y="0.0" data-yaw="0">Home</button>
+                    </div>
+                </div>
+                
+                <div class="nav-status" id="nav-status" style="display: none;">
+                    <div class="nav-status-header">
+                        <i class="fas fa-route"></i>
+                        <span id="nav-status-text">Ready</span>
+                    </div>
+                    <div class="nav-progress-bar">
+                        <div class="nav-progress" id="nav-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <button class="btn-cancel" id="cancel-nav" style="display: none;">
+                    <i class="fas fa-times-circle"></i> Cancel Navigation
+                </button>
+            </div>
 
             <div class="speed-section">
                 <h2>Speed Control</h2>

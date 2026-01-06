@@ -196,3 +196,192 @@ function updateKeyDrive() {
         publishTwist(lx, ly, az);
     }
 }
+
+// === AUTOMATION ADDITIONS ===
+
+// 7. Mode State Management
+var currentMode = 'IDLE'; // 'IDLE', 'MANUAL', 'AUTO'
+
+// Nav2 Action Client for navigate_to_pose
+var navigateClient = new ROSLIB.ActionClient({
+    ros: ros,
+    serverName: '/navigate_to_pose',
+    actionName: 'nav2_msgs/action/NavigateToPose',
+    timeout: 10000
+});
+
+// Current navigation goal handle
+var currentGoal = null;
+
+// Mode switching functions
+function setMode(mode) {
+    currentMode = mode;
+    updateModeUI();
+
+    // Show/hide relevant sections
+    if (mode === 'AUTO') {
+        document.getElementById('waypoints-section').style.display = 'block';
+        document.getElementById('nav-status').style.display = 'block';
+
+        // Disable manual movement controls visually
+        document.querySelector('.movement-section').style.opacity = '0.5';
+        document.querySelector('.movement-section').style.pointerEvents = 'none';
+
+        // Also disable speed slider
+        document.querySelector('.speed-section').style.opacity = '0.5';
+        document.querySelector('.speed-section').style.pointerEvents = 'none';
+
+    } else {
+        document.getElementById('waypoints-section').style.display = 'none';
+        document.getElementById('nav-status').style.display = 'none';
+
+        // Enable manual movement in MANUAL mode
+        if (mode === 'MANUAL') {
+            document.querySelector('.movement-section').style.opacity = '1';
+            document.querySelector('.movement-section').style.pointerEvents = 'auto';
+            document.querySelector('.speed-section').style.opacity = '1';
+            document.querySelector('.speed-section').style.pointerEvents = 'auto';
+        } else {
+            // IDLE: Disable everything
+            document.querySelector('.movement-section').style.opacity = '0.5';
+            document.querySelector('.movement-section').style.pointerEvents = 'none';
+            document.querySelector('.speed-section').style.opacity = '0.5';
+            document.querySelector('.speed-section').style.pointerEvents = 'none';
+        }
+
+        // Cancel any ongoing navigation when leaving AUTO mode
+        if (currentGoal) {
+            cancelNavigation();
+        }
+    }
+}
+
+// Send navigation goal to Nav2
+function sendNavGoal(x, y, yaw) {
+    if (currentMode !== 'AUTO') {
+        console.warn('Not in AUTO mode, ignoring navigation goal');
+        return;
+    }
+
+    // Cancel any existing goal first
+    if (currentGoal) {
+        currentGoal.cancel();
+    }
+
+    // Convert yaw to quaternion (simple 2D rotation around Z)
+    var qz = Math.sin(yaw / 2);
+    var qw = Math.cos(yaw / 2);
+
+    var goal = new ROSLIB.Goal({
+        actionClient: navigateClient,
+        goalMessage: {
+            pose: {
+                header: {
+                    frame_id: 'map',
+                    stamp: { sec: 0, nanosec: 0 } // Use 0 for "now" in sim/real usually works if transform is available
+                },
+                pose: {
+                    position: { x: x, y: y, z: 0.0 },
+                    orientation: { x: 0.0, y: 0.0, z: qz, w: qw }
+                }
+            }
+        }
+    });
+
+    goal.on('feedback', function (feedback) {
+        updateNavProgress(feedback);
+    });
+
+    goal.on('result', function (result) {
+        navComplete(result);
+    });
+
+    goal.send();
+    currentGoal = goal;
+
+    updateNavStatusText('Navigating...');
+    document.getElementById('cancel-nav').style.display = 'block';
+    console.log(`Sent goal: x=${x}, y=${y}, yaw=${yaw}`);
+}
+
+// Cancel ongoing navigation
+function cancelNavigation() {
+    if (currentGoal) {
+        currentGoal.cancel();
+        currentGoal = null;
+        updateNavStatusText('Navigation cancelled');
+        document.getElementById('cancel-nav').style.display = 'none';
+        document.getElementById('nav-progress').style.width = '0%';
+    }
+}
+
+// Navigation complete callback
+function navComplete(result) {
+    currentGoal = null;
+    document.getElementById('cancel-nav').style.display = 'none';
+    document.getElementById('nav-progress').style.width = '100%';
+    updateNavStatusText('Goal reached!');
+
+    setTimeout(() => {
+        // Reset only if we haven't started a new goal
+        if (!currentGoal) {
+            document.getElementById('nav-progress').style.width = '0%';
+            updateNavStatusText('Ready');
+        }
+    }, 3000);
+}
+
+// Update progress display
+function updateNavProgress(feedback) {
+    // NavigateToPose feedback contains distance_remaining
+    if (feedback && feedback.distance_remaining !== undefined) {
+        // Just a visual approximation: assume starting roughly < 5m away for 0-100%
+        // A better way is to capture start distance, but this suffices for simple UI
+        var dist = feedback.distance_remaining;
+        var pct = Math.max(0, Math.min(100, (1 - (dist / 3.0)) * 100)); // Assume 3m max trip for progress bar
+
+        // If really close, snap to 95%
+        if (dist < 0.2) pct = 95;
+
+        document.getElementById('nav-progress').style.width = pct + '%';
+        updateNavStatusText(`Dist: ${dist.toFixed(2)}m`);
+    }
+}
+
+// UI update helpers
+function updateModeUI() {
+    var modeVal = document.getElementById('mode-value');
+    modeVal.innerText = currentMode;
+
+    // Classes for badge
+    modeVal.className = 'mode-value mode-' + currentMode.toLowerCase();
+
+    // Toggle active buttons
+    document.querySelectorAll('.btn-mode').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('mode-' + currentMode.toLowerCase()).classList.add('active');
+}
+
+function updateNavStatusText(text) {
+    document.getElementById('nav-status-text').innerText = text;
+}
+
+// Event bindings for mode buttons
+document.getElementById('mode-idle').addEventListener('click', () => setMode('IDLE'));
+document.getElementById('mode-manual').addEventListener('click', () => setMode('MANUAL'));
+document.getElementById('mode-auto').addEventListener('click', () => setMode('AUTO'));
+
+// Event binding for cancel button
+document.getElementById('cancel-nav').addEventListener('click', cancelNavigation);
+
+// Bind waypoint buttons
+document.querySelectorAll('.btn-waypoint').forEach(btn => {
+    btn.addEventListener('click', function () {
+        var x = parseFloat(this.dataset.x);
+        var y = parseFloat(this.dataset.y);
+        var yaw = parseFloat(this.dataset.yaw);
+        sendNavGoal(x, y, yaw);
+    });
+});
+
+// Initialize in IDLE mode
+setMode('IDLE');
