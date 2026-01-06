@@ -222,6 +222,7 @@ function setMode(mode) {
     if (mode === 'AUTO') {
         document.getElementById('waypoints-section').style.display = 'block';
         document.getElementById('nav-status').style.display = 'block';
+        document.getElementById('mapping-section').style.display = 'none';
 
         // Disable manual movement controls visually
         document.querySelector('.movement-section').style.opacity = '0.5';
@@ -241,12 +242,16 @@ function setMode(mode) {
             document.querySelector('.movement-section').style.pointerEvents = 'auto';
             document.querySelector('.speed-section').style.opacity = '1';
             document.querySelector('.speed-section').style.pointerEvents = 'auto';
+
+            // Show mapping tools in MANUAL mode
+            document.getElementById('mapping-section').style.display = 'block';
         } else {
             // IDLE: Disable everything
             document.querySelector('.movement-section').style.opacity = '0.5';
             document.querySelector('.movement-section').style.pointerEvents = 'none';
             document.querySelector('.speed-section').style.opacity = '0.5';
             document.querySelector('.speed-section').style.pointerEvents = 'none';
+            document.getElementById('mapping-section').style.display = 'none';
         }
 
         // Cancel any ongoing navigation when leaving AUTO mode
@@ -432,4 +437,43 @@ function initMap() {
 ros.on('connection', function () {
     setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
 });
+
+
+// === MAPPING TOOLS ===
+var saveMapClient = new ROSLIB.Service({
+    ros: ros,
+    name: '/slam_toolbox/save_map',
+    serviceType: 'slam_toolbox/srv/SaveMap'
+});
+
+document.getElementById('btn-save-map').addEventListener('click', function () {
+    var name = document.getElementById('map-name').value;
+    if (!name) {
+        alert('Please enter a map name');
+        return;
+    }
+
+    var request = new ROSLIB.ServiceRequest({
+        name: { data: name }
+    });
+
+    var statusSpan = document.getElementById('save-map-status');
+    statusSpan.innerText = "Saving...";
+    statusSpan.style.color = "#636E72";
+
+    saveMapClient.callService(request, function (result) {
+        console.log('Result for service call on ' + saveMapClient.name + ': ' + result);
+        statusSpan.innerText = "Map Saved Successfully!";
+        statusSpan.style.color = "var(--success)";
+
+        setTimeout(() => {
+            statusSpan.innerText = "";
+        }, 3000);
+    }, function (error) {
+        console.error(error);
+        statusSpan.innerText = "Error Saving Map";
+        statusSpan.style.color = "var(--danger)";
+    });
+});
+
 
