@@ -16,7 +16,7 @@ def generate_launch_description():
         output=     'screen', 
         prefix=     'xterm -e', 
         parameters=[ 
-            {"use_sim_time": True}, 
+            {"use_sim_time": False}, 
             {'stamped': True},  
             {'frame_id': 'base_footprint'},],  
         remappings=[('cmd_vel', 'cmd_vel_keyboard')],  
@@ -29,7 +29,7 @@ def generate_launch_description():
         name=       'twist_stamper', 
         parameters=[ 
             {'frame_id': 'base_footprint'},  
-            {"use_sim_time": True}, ],  
+            {"use_sim_time": False}, ],  
         remappings=[ 
             # ('/cmd_vel_in', '/cmd_vel_joystick_unstamped'), 
             # ('/cmd_vel_out','/cmd_vel_joystick'),  
@@ -46,7 +46,7 @@ def generate_launch_description():
         output=     'screen', 
         parameters=[
             twistmux_params,  
-            {"use_sim_time": True},
+            {"use_sim_time": False},
         ], 
         remappings=[ 
             # ('/cmd_vel_out', '/rmitbot_controller/cmd_vel')], 
