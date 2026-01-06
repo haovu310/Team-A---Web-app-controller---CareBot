@@ -85,31 +85,41 @@ main {
     flex: 1;
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 2rem;
-    padding: 2rem;
-    max-width: 1400px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+        "camera controls"
+        "map controls";
+    gap: 1.5rem;
+    padding: 1.5rem;
+    max-width: 1600px;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
+    height: calc(100vh - 80px);
+    /* Fill remaining height */
+    overflow: hidden;
+    /* Prevent body scroll, scroll inside cards if needed */
 }
 
 /* Camera Section */
 .camera-card {
+    grid-area: camera;
     background: var(--card-bg);
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
     align-items: center;
     position: relative;
     justify-content: center;
+    min-height: 0;
 }
 
 .stream-wrapper {
     width: 100%;
-    max-width: 640px;
-    aspect-ratio: 4/3;
+    height: 100%;
+    max-height: 100%;
     background: #000;
     border-radius: 12px;
     overflow: hidden;
@@ -120,9 +130,9 @@ main {
 }
 
 #streaming {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .camera-overlay {
@@ -134,18 +144,25 @@ main {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.8rem;
+    z-index: 2;
 }
 
 /* Controls Section */
 .controls-card {
+    grid-area: controls;
     background: var(--card-bg);
     border-radius: var(--radius);
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
+    overflow-y: auto;
+    /* Scrollable controls if too tall */
+    height: 100%;
+    box-sizing: border-box;
 }
+
 
 h2 {
     font-size: 1.2rem;
@@ -463,22 +480,25 @@ footer {
 
 /* Map Section */
 .map-card {
+    grid-area: map;
     background: var(--card-bg);
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-top: 1rem;
-    min-height: 300px;
+    margin-top: 0;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
 }
 
 .map-wrapper {
     width: 100%;
-    height: 300px;
-    /* specific height for canvas */
+    height: 100%;
+    /* Fill the card */
     border-radius: 12px;
     overflow: hidden;
     position: relative;
@@ -492,6 +512,7 @@ footer {
     width: 100%;
     height: 100%;
 }
+
 
 /* Mapping Section */
 .mapping-section {
