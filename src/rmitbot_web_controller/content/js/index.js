@@ -34,7 +34,7 @@ ros.on('close', function () {
 // 2. Publisher Setup
 var cmdVel = new ROSLIB.Topic({
     ros: ros,
-    name: '/cmd_vel',
+    name: 'cmd_vel_keyboard',
     messageType: 'geometry_msgs/TwistStamped'
 });
 
