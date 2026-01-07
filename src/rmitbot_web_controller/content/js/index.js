@@ -437,6 +437,12 @@ function initMap() {
 // Since we can have multiple listeners, adding one here is cleaner.
 ros.on('connection', function () {
     setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
+
+    // Set camera stream
+    // Using port 8080 (web_video_server) and topic /camera/image_raw
+    var host = window.location.hostname || 'localhost';
+    var streamUrl = 'http://' + host + ':8080/stream?topic=/camera/image_raw&type=mjpeg&width=640&height=480';
+    document.getElementById('streaming').src = streamUrl;
 });
 
 

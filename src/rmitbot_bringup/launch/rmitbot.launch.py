@@ -14,7 +14,9 @@ def generate_launch_description():
     pkg_path_controller =   get_package_share_directory("rmitbot_controller")
     pkg_path_localization = get_package_share_directory("rmitbot_localization")
     pkg_path_mapping = get_package_share_directory("rmitbot_mapping")
+    pkg_path_mapping = get_package_share_directory("rmitbot_mapping")
     pkg_path_navigation = get_package_share_directory("rmitbot_navigation")
+    pkg_path_vision = get_package_share_directory("rmitbot_vision")
     
     # Launch rviz
     display = IncludeLaunchDescription(
@@ -44,6 +46,11 @@ def generate_launch_description():
     mapping = IncludeLaunchDescription(
         os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
     )
+
+    # Launch the camera
+    camera = IncludeLaunchDescription(
+        os.path.join(pkg_path_vision,"launch","camera.launch.py"),
+    )
     
         # Launch the twistmux instead of keyboard node only
     twistmux = IncludeLaunchDescription(
@@ -69,6 +76,6 @@ def generate_launch_description():
         twistmux,
         # localization,
         # rplidar, 
-        # mapping, 
         navigation_delayed, 
+        # camera,
     ])
