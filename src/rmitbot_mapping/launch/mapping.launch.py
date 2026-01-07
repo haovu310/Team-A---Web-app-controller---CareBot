@@ -12,15 +12,23 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 
 def generate_launch_description():
     
+    # Declare use_sim_time argument
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation time'
+    )
+    
     slam_launch = IncludeLaunchDescription(
         os.path.join(get_package_share_directory("slam_toolbox"),"launch","online_async_launch.py"),
         launch_arguments={
             'params_file': os.path.join(get_package_share_directory("rmitbot_mapping"), "config", "slam.yaml"),             
-            'use_sim_time': "False", 
+            'use_sim_time': LaunchConfiguration('use_sim_time'), 
             }.items()
     )
     
     return LaunchDescription([
+        use_sim_time_arg,
         slam_launch,
     ])
     

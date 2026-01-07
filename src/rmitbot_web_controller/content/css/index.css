@@ -80,6 +80,40 @@ header {
     background-color: var(--danger);
 }
 
+/* Connection Selector */
+.connection-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.connection-selector label {
+    font-weight: 500;
+}
+
+.connection-selector select {
+    padding: 6px 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.connection-selector select:hover {
+    border-color: var(--primary-dark);
+}
+
+.connection-selector select:focus {
+    border-color: var(--primary-dark);
+}
+
+
 /* Main Layout */
 main {
     flex: 1;

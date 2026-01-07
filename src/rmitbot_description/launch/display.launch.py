@@ -14,6 +14,14 @@ def generate_launch_description():
     pkg_path_description = get_package_share_directory("rmitbot_description")
     # Path to the rviz config file
     rviz_path = os.path.join(pkg_path_description, 'rviz', 'display.rviz')
+    
+    # Declare use_sim_time argument
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation time'
+    )
+    
     # This node launches RViz2 with the specified configuration file
     rviz = Node(
         package=    'rviz2',
@@ -21,9 +29,10 @@ def generate_launch_description():
         name=       'rviz2',
         output=     'screen',
         arguments=[ '-d', rviz_path],
-        parameters=[{"use_sim_time": False}],
+        parameters=[{"use_sim_time": LaunchConfiguration('use_sim_time')}],
     )
     
     return LaunchDescription([
+        use_sim_time_arg,
         rviz, 
     ])

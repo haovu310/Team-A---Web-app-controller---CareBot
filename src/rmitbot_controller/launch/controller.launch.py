@@ -23,11 +23,19 @@ def generate_launch_description():
     pkg_path_description = get_package_share_directory("rmitbot_description")
     urdf_path = os.path.join(pkg_path_description, 'urdf', 'rmitbot.urdf.xacro')
     robot_description = ParameterValue(Command(['xacro ', '\'', urdf_path, '\'']), value_type=str)
+    
+    # Declare use_sim_time argument
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation time'
+    )
+    
     # Publish the robot static TF from the urdf
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        parameters=[{"use_sim_time": False, 
+        parameters=[{"use_sim_time": LaunchConfiguration('use_sim_time'), 
                      "robot_description": robot_description}],
         )
     
@@ -36,7 +44,7 @@ def generate_launch_description():
         package=        "controller_manager",
         executable=     "ros2_control_node",
         parameters=[{   "robot_description": robot_description,
-                        "use_sim_time": False},
+                        "use_sim_time": LaunchConfiguration('use_sim_time')},
                         config_controller, 
         ],
     )
@@ -88,6 +96,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            use_sim_time_arg,
             robot_state_publisher, 
             controller_manager, 
             joint_state_broadcaster_spawner,

@@ -1,7 +1,16 @@
 // CareBot Controller Logic
 
-// ROS Connection - Connect to Pi's rosbridge
-var rosHost = '172.20.10.4'; // Pi IP address
+// Connection Mode Configuration
+const CONNECTION_MODES = {
+    hardware: '172.20.10.4',  // Pi IP address
+    simulation: 'localhost'    // Simulation on local machine
+};
+
+// Get initial connection mode from selector
+var connectionMode = document.getElementById('connection-mode').value;
+var rosHost = CONNECTION_MODES[connectionMode];
+
+// ROS Connection
 var ros = new ROSLIB.Ros({
     url: 'ws://' + rosHost + ':9090'
 });
@@ -11,25 +20,57 @@ const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('connection-text');
 const speedSlider = document.getElementById('speed-slider');
 const speedDisplay = document.getElementById('speed-display');
+const connectionSelector = document.getElementById('connection-mode');
+
+// Connection Mode Change Handler
+connectionSelector.addEventListener('change', function (e) {
+    connectionMode = e.target.value;
+    rosHost = CONNECTION_MODES[connectionMode];
+
+    console.log(`Switching to ${connectionMode} mode at ${rosHost}`);
+
+    // Close existing connection
+    ros.close();
+
+    // Create new connection
+    ros = new ROSLIB.Ros({
+        url: 'ws://' + rosHost + ':9090'
+    });
+
+    // Reattach event handlers
+    setupROSConnection();
+
+    // Reinitialize topics and clients
+    reinitializeROSComponents();
+});
 
 // Connection Handlers
-ros.on('connection', function () {
-    console.log('Connected to websocket server.');
-    statusDot.className = 'status-dot connected';
-    statusText.innerText = 'Online';
-});
+function setupROSConnection() {
+    ros.on('connection', function () {
+        console.log('Connected to websocket server.');
+        statusDot.className = 'status-dot connected';
+        statusText.innerText = `Online (${connectionMode})`;
 
-ros.on('error', function (error) {
-    console.log('Error connecting: ', error);
-    statusDot.className = 'status-dot disconnected';
-    statusText.innerText = 'Error';
-});
+        // Initialize map after connection
+        setTimeout(initMap, 1000);
+    });
 
-ros.on('close', function () {
-    console.log('Connection closed.');
-    statusDot.className = 'status-dot disconnected';
-    statusText.innerText = 'Offline';
-});
+    ros.on('error', function (error) {
+        console.log('Error connecting: ', error);
+        statusDot.className = 'status-dot disconnected';
+        statusText.innerText = 'Error';
+    });
+
+    ros.on('close', function () {
+        console.log('Connection closed.');
+        statusDot.className = 'status-dot disconnected';
+        statusText.innerText = 'Offline';
+    });
+}
+
+// Initialize connection handlers
+setupROSConnection();
+
 
 // 2. Publisher Setup
 var cmdVel = new ROSLIB.Topic({
@@ -392,6 +433,41 @@ document.querySelectorAll('.btn-waypoint').forEach(btn => {
 // Initialize in IDLE mode
 setMode('IDLE');
 
+// === REINITIALIZATION FOR CONNECTION SWITCHING ===
+function reinitializeROSComponents() {
+    // Reinitialize cmd_vel topic
+    cmdVel = new ROSLIB.Topic({
+        ros: ros,
+        name: 'cmd_vel_keyboard',
+        messageType: 'geometry_msgs/TwistStamped'
+    });
+
+    // Reinitialize navigation action client
+    navigateClient = new ROSLIB.ActionClient({
+        ros: ros,
+        serverName: '/navigate_to_pose',
+        actionName: 'nav2_msgs/action/NavigateToPose',
+        timeout: 10000
+    });
+
+    // Reinitialize map services
+    saveMapClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/save_map',
+        serviceType: 'slam_toolbox/srv/SaveMap'
+    });
+
+    loadMapClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/deserialize_map',
+        serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
+    });
+
+    // Reset map visualization
+    viewer = null;
+    gridClient = null;
+}
+
 // === MAP VISUALIZATION ===
 var viewer = null;
 var gridClient = null;
@@ -407,6 +483,7 @@ function initMap() {
     if (!viewer) {
         viewer = new ROS2D.Viewer({
             divID: 'map-canvas',
+
             width: width,
             height: height,
             background: '#efefef' // matches css background roughly
@@ -431,16 +508,8 @@ function initMap() {
     }
 }
 
-// Hook into connection
-// We already have ros.on('connection', ...) at the top. 
-// We can add another listener or modify the existing one. 
-// Since we can have multiple listeners, adding one here is cleaner.
-ros.on('connection', function () {
-    setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
-});
-
-
 // === MAPPING TOOLS ===
+
 var saveMapClient = new ROSLIB.Service({
     ros: ros,
     name: '/slam_toolbox/save_map',

@@ -23,10 +23,18 @@
             <span class="mode-label">Mode:</span>
             <span class="mode-value mode-idle" id="mode-value">IDLE</span>
         </div>
+        <div class="connection-selector">
+            <label for="connection-mode">Connection:</label>
+            <select id="connection-mode">
+                <option value="hardware">Hardware (Pi)</option>
+                <option value="simulation" selected>Simulation</option>
+            </select>
+        </div>
         <div class="status-panel">
             <span id="connection-text">Disconnected</span>
             <div id="status-dot" class="status-dot disconnected"></div>
         </div>
+
     </header>
 
     <main>

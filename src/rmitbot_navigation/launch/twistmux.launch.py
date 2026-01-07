@@ -8,6 +8,14 @@ from launch.substitutions import LaunchConfiguration
 # ros2 launch rmitbot_controller twistmux.launch.py 
 
 def generate_launch_description(): 
+    
+    # Declare use_sim_time argument
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation time'
+    )
+    
     # teleop_keyboard
     teleop_keyboard = Node( 
         package=    'teleop_twist_keyboard', 
@@ -16,7 +24,7 @@ def generate_launch_description():
         output=     'screen', 
         prefix=     'xterm -e', 
         parameters=[ 
-            {"use_sim_time": False}, 
+            {"use_sim_time": LaunchConfiguration('use_sim_time')}, 
             {'stamped': True},  
             {'frame_id': 'base_footprint'},],  
         remappings=[('cmd_vel', 'cmd_vel_keyboard')],  
@@ -29,7 +37,7 @@ def generate_launch_description():
         name=       'twist_stamper', 
         parameters=[ 
             {'frame_id': 'base_footprint'},  
-            {"use_sim_time": False}, ],  
+            {"use_sim_time": LaunchConfiguration('use_sim_time')}, ],  
         remappings=[ 
             # ('/cmd_vel_in', '/cmd_vel_joystick_unstamped'), 
             # ('/cmd_vel_out','/cmd_vel_joystick'),  
@@ -46,7 +54,7 @@ def generate_launch_description():
         output=     'screen', 
         parameters=[
             twistmux_params,  
-            {"use_sim_time": False},
+            {"use_sim_time": LaunchConfiguration('use_sim_time')},
         ], 
         remappings=[ 
             # ('/cmd_vel_out', '/rmitbot_controller/cmd_vel')], 
@@ -54,7 +62,9 @@ def generate_launch_description():
     ) 
 
     return LaunchDescription([ 
+        use_sim_time_arg,
         twistmux_node,  
         teleop_keyboard,
         twist_stamper_node, 
     ]) 
+ 
