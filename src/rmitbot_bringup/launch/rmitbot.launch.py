@@ -26,66 +26,84 @@ def generate_launch_description():
         description='Enable camera and AprilTag vision system'
     )
     
-    # Launch rviz
-    display = IncludeLaunchDescription(
-        os.path.join(pkg_path_description,"launch","display.launch.py"),
-    )
+    # ==================================================================================================
+    #   SECTION 1: ROBOT / RASPBERRY PI
+    #   Run this section on the Robot. Comment out SECTION 2 when running on the Robot.
+    # ==================================================================================================
     
-    
-    # Launch the controller manager
+    # 1.1: Robot Controller (Motors, ros2_control, robot_state_publisher)
     controller = IncludeLaunchDescription(
         os.path.join(pkg_path_controller,"launch","controller.launch.py"),
     )
-        
-    # Launch ekf node
+    
+    # 1.2: Lidar Sensor
+    rplidar = IncludeLaunchDescription(
+        os.path.join(pkg_path_mapping,"launch", "rplidar.launch.py"),
+        launch_arguments={"use_sim_time": "False"}.items()
+    )
+    
+    # 1.3: Localization (EKF)
     localization = IncludeLaunchDescription(
         os.path.join(pkg_path_localization,"launch","localization.launch.py"),
     )
     
-    # Launch the rplidar hardware
-    rplidar = IncludeLaunchDescription(
-        os.path.join(pkg_path_mapping,"launch", "rplidar.launch.py"),
-        launch_arguments={
-            "use_sim_time": "False"
-        }.items()
-    )
-    
-    # Launch the mapping node
-    mapping = IncludeLaunchDescription(
-        os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
-    )
-    
-    # Launch the twistmux instead of keyboard node only
-    twistmux = IncludeLaunchDescription(
-        os.path.join(pkg_path_navigation,"launch","twistmux.launch.py"),
-    )
-    
-    navigation = IncludeLaunchDescription(
-        os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
-    )
-    
-    # Launch vision system (camera + AprilTag detection)
+    # 1.4: Vision System (Camera + AprilTag)
     vision = IncludeLaunchDescription(
         os.path.join(pkg_path_vision,"launch","vision.launch.py"),
         condition=IfCondition(LaunchConfiguration('enable_vision'))
     )
     
-    # Launch the navigation 10s after slamtoolbox, to make sure that a map is available
+    # 1.5: Twist Multiplexer (Safety Control & Priority)
+    # MUST run on Robot for safety and proper control handling
+    twistmux = IncludeLaunchDescription(
+        os.path.join(pkg_path_navigation,"launch","twistmux.launch.py"),
+    )
+    
+    # ==================================================================================================
+    #   SECTION 2: WORKSTATION / PC
+    #   Run this section on the PC. Comment out SECTION 1 when running on the PC.
+    # ==================================================================================================
+    
+    # 2.1: Visualization (RViz)
+    display = IncludeLaunchDescription(
+        os.path.join(pkg_path_description,"launch","display.launch.py"),
+    )
+    
+    # 2.2: Mapping (SLAM Toolbox)
+    mapping = IncludeLaunchDescription(
+        os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
+    )
+    
+    # 2.3: Navigation (Nav2)
+    navigation = IncludeLaunchDescription(
+        os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
+    )
+    
+    # Delayed Start for Navigation (Wait for Map/SLAM)
     navigation_delayed = TimerAction(
         period = 5., 
         actions=[navigation]
     )
-    
-    # PC: display, twistmux, navigation_delayed, vision
-    # RPI: controller, localization, rplidar, mapping, vision
+
+    # ==================================================================================================
+    #   LAUNCH DESCRIPTION
+    #   Uncomment the lines corresponding to your current setup (PC or Robot)
+    # ==================================================================================================
     return LaunchDescription([
         enable_vision_arg,
-        display,
+        
+        # --- ROBOT SECTION (Uncomment for Pi) ---
         # controller,
-        twistmux,
+        # rplidar,
         # localization,
-        # rplidar, 
-        # mapping,
-        vision, 
-        navigation_delayed, 
+        # vision,
+        # twistmux,     
+
+        # --- PC SECTION (Uncomment for Workstation) ---
+        display,
+        mapping,            # Enable for SLAM
+        navigation_delayed, # Enable for Nav2
+        
+        # Note: 'vision' can also run on PC if testing with USB webcam
+        # vision, 
     ])
