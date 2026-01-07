@@ -222,50 +222,46 @@ function setMode(mode) {
     // Show/hide relevant sections
     if (mode === 'AUTO') {
         document.getElementById('waypoints-section').style.display = 'block';
+        document.getElementById('custom-goal-section').style.display = 'block';
         document.getElementById('nav-status').style.display = 'block';
-        document.getElementById('mapping-section').style.display = 'none';
+        document.getElementById('user-manual-section').style.display = 'none';
 
         // Disable manual movement controls visually
-        document.querySelector('.movement-section').style.opacity = '0.5';
-        document.querySelector('.movement-section').style.pointerEvents = 'none';
-
-        // Also disable speed slider
-        document.querySelector('.speed-section').style.opacity = '0.5';
-        document.querySelector('.speed-section').style.pointerEvents = 'none';
+        document.querySelector('.movement-section').style.display = 'none'; // Completely hide in Auto
+        document.querySelector('.speed-section').style.display = 'none';
 
     } else {
         document.getElementById('waypoints-section').style.display = 'none';
+        document.getElementById('custom-goal-section').style.display = 'none';
         document.getElementById('nav-status').style.display = 'none';
 
         // Enable manual movement in MANUAL mode
         if (mode === 'MANUAL') {
+            document.getElementById('user-manual-section').style.display = 'none';
+            document.querySelector('.movement-section').style.display = 'block';
             document.querySelector('.movement-section').style.opacity = '1';
             document.querySelector('.movement-section').style.pointerEvents = 'auto';
+
+            document.querySelector('.speed-section').style.display = 'block';
             document.querySelector('.speed-section').style.opacity = '1';
             document.querySelector('.speed-section').style.pointerEvents = 'auto';
 
-            // Show mapping tools in MANUAL mode
-            document.getElementById('mapping-section').style.display = 'block';
         } else {
-            // IDLE: Disable everything
-            document.querySelector('.movement-section').style.opacity = '0.5';
-            document.querySelector('.movement-section').style.pointerEvents = 'none';
-            document.querySelector('.speed-section').style.opacity = '0.5';
-            document.querySelector('.speed-section').style.pointerEvents = 'none';
-            document.getElementById('mapping-section').style.display = 'none';
+            // IDLE: Show Manual, Hide controls
+            document.getElementById('user-manual-section').style.display = 'block';
+
+            document.querySelector('.movement-section').style.display = 'none';
+            document.querySelector('.speed-section').style.display = 'none';
         }
 
         // Cancel any ongoing navigation when leaving AUTO mode
-        if (currentGoal) {
-            cancelNavigation();
-        }
     }
 }
 
 // Send navigation goal to Nav2
 function sendNavGoal(x, y, yaw) {
     if (currentMode !== 'AUTO') {
-        console.warn('Not in AUTO mode, ignoring navigation goal');
+        alert('Please switch to AUTO mode to navigate.');
         return;
     }
 
@@ -387,6 +383,14 @@ document.querySelectorAll('.btn-waypoint').forEach(btn => {
         var yaw = parseFloat(this.dataset.yaw);
         sendNavGoal(x, y, yaw);
     });
+});
+
+// Bind Custom Goal Button
+document.getElementById('btn-go-goal').addEventListener('click', function () {
+    var x = parseFloat(document.getElementById('goal-x').value) || 0;
+    var y = parseFloat(document.getElementById('goal-y').value) || 0;
+    var yaw = parseFloat(document.getElementById('goal-yaw').value) || 0;
+    sendNavGoal(x, y, yaw);
 });
 
 // Initialize in IDLE mode

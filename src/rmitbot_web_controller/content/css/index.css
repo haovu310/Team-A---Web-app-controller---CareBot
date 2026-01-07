@@ -567,3 +567,91 @@ footer {
     color: var(--text-muted);
     margin-left: 2px;
 }
+
+/* Custom Goal Section */
+.custom-goal-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--bg-color);
+    border-radius: 12px;
+}
+
+.custom-goal-section h3 {
+    margin: 0 0 0.8rem 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.input-group input {
+    padding: 8px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    outline: None;
+}
+
+.input-group input:focus {
+    border-color: var(--primary-color);
+}
+
+.btn-go {
+    background: #0984e3;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-go:hover {
+    background: #00cec9;
+}
+
+/* Mapping Card (Persistent) */
+.mapping-card {
+    border-top: 2px solid var(--bg-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.mapping-controls input {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+}
+
+/* User Manual */
+.user-manual-section {
+    background: #eef2f7;
+    border-left: 4px solid var(--primary-dark);
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.user-manual-section h3 {
+    margin-top: 0;
+    color: var(--primary-dark);
+    font-size: 1rem;
+}
+
+.manual-content p {
+    margin: 8px 0 4px 0;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.manual-content ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}

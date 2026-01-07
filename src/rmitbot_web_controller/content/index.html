@@ -58,29 +58,47 @@
                     <button class="btn-mode" id="mode-auto">AUTO</button>
                 </div>
 
-                <div class="waypoints-section" id="waypoints-section" style="display: none;">
-                    <h3>Quick Destinations</h3>
-                    <div class="waypoint-buttons">
-                        <button class="btn-waypoint" data-x="1.0" data-y="0.0" data-yaw="0">Table A</button>
-                        <button class="btn-waypoint" data-x="2.0" data-y="1.0" data-yaw="1.57">Table B</button>
-                        <button class="btn-waypoint" data-x="0.0" data-y="2.0" data-yaw="3.14">Station</button>
-                        <button class="btn-waypoint" data-x="0.0" data-y="0.0" data-yaw="0">Home</button>
+                <!-- User Manual (Visible in IDLE) -->
+                <div class="user-manual-section" id="user-manual-section">
+                    <h3><i class="fas fa-book"></i> System Instructions</h3>
+                    <div class="manual-content">
+                        <p><strong>1. Manual Mode:</strong></p>
+                        <ul>
+                            <li>Use <strong>WASD</strong> keys or on-screen D-Pad to drive.</li>
+                            <li>Explore the area to build a map.</li>
+                            <li>Use <strong>Map Management</strong> below to SAVE your map.</li>
+                        </ul>
+                        <p><strong>2. Auto Mode:</strong></p>
+                        <ul>
+                            <li>Ensure a map is loaded (use <strong>Load Map</strong>).</li>
+                            <li>Enter <strong>Custom Goal</strong> coordinates (X, Y, Yaw).</li>
+                            <li>Click <strong>GO</strong> to start autonomous navigation.</li>
+                        </ul>
+                        <p><strong>3. Map Management:</strong></p>
+                        <ul>
+                            <li>Save maps after building them in Manual mode.</li>
+                            <li>Load maps before starting Auto mode.</li>
+                        </ul>
                     </div>
                 </div>
 
-                <div class="mapping-section" id="mapping-section" style="display: none;">
-                    <h3>Mapping Tools</h3>
-                    <div class="mapping-controls">
-                        <input type="text" id="map-name" placeholder="map_name" value="my_map">
-                        <button class="btn-save-map" id="btn-save-map">Save Map</button>
+                <div class="custom-goal-section" id="custom-goal-section" style="display: none;">
+                    <h3>Custom Goal</h3>
+                    <div class="input-group">
+                        <input type="number" id="goal-x" placeholder="X (m)" step="0.1" style="width: 60px;">
+                        <input type="number" id="goal-y" placeholder="Y (m)" step="0.1" style="width: 60px;">
+                        <input type="number" id="goal-yaw" placeholder="Yaw (rad)" step="0.1" style="width: 60px;">
+                        <button class="btn-go" id="btn-go-goal">GO</button>
                     </div>
-                    <span id="save-map-status"></span>
+                </div>
 
-                    <div class="mapping-controls" style="margin-top: 10px;">
-                        <input type="text" id="load-map-name" placeholder="map to load" value="my_map">
-                        <button class="btn-save-map" id="btn-load-map">Load Map</button>
+                <div class="waypoints-section" id="waypoints-section" style="display: none;">
+                    <h3>Demo Locations</h3>
+                    <div class="waypoint-buttons">
+                        <button class="btn-waypoint" data-x="1.0" data-y="0.0" data-yaw="0">Pt A</button>
+                        <button class="btn-waypoint" data-x="2.0" data-y="0.0" data-yaw="0">Pt B</button>
+                        <button class="btn-waypoint" data-x="0.0" data-y="0.0" data-yaw="0">Home</button>
                     </div>
-                    <span id="load-map-status"></span>
                 </div>
 
                 <div class="nav-status" id="nav-status" style="display: none;">
@@ -96,6 +114,22 @@
                 <button class="btn-cancel" id="cancel-nav" style="display: none;">
                     <i class="fas fa-times-circle"></i> Cancel Navigation
                 </button>
+            </div>
+
+            <!-- Persistent Mapping Tools -->
+            <div class="mapping-card">
+                <h2>Map Management</h2>
+                <div class="mapping-controls">
+                    <input type="text" id="map-name" placeholder="Save as..." value="my_map">
+                    <button class="btn-save-map" id="btn-save-map">Save</button>
+                </div>
+                <span id="save-map-status"></span>
+
+                <div class="mapping-controls" style="margin-top: 10px;">
+                    <input type="text" id="load-map-name" placeholder="Load map..." value="my_map">
+                    <button class="btn-save-map" id="btn-load-map">Load</button>
+                </div>
+                <span id="load-map-status"></span>
             </div>
 
             <div class="speed-section">
@@ -137,7 +171,7 @@
         CareBot System v1.0 | Hospital Unit A | Shortcuts: WASD = Move, Space = E-Stop
     </footer>
 
-    <script src="js/index.js?v=3"></script>
+    <script src="js/index.js?v=4"></script>
 </body>
 
 </html>
