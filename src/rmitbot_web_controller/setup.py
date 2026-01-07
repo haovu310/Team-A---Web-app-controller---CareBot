@@ -26,7 +26,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'web_server = rmitbot_web_controller.web_server:main'
+            'web_server = rmitbot_web_controller.web_server:main',
+            'camera_stream = rmitbot_web_controller.camera_stream:main'
         ],
     },
 )

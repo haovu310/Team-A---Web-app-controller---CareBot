@@ -18,5 +18,13 @@ def generate_launch_description():
             name='web_server',
             output='screen',
             parameters=[{'port': 8000}]
+        ),
+        # Start camera stream server
+        Node(
+            package='rmitbot_web_controller',
+            executable='camera_stream',
+            name='camera_stream',
+            output='screen',
+            parameters=[{'stream_port': 8001}]
         )
     ])

@@ -1,6 +1,8 @@
 import os
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction, RegisterEventHandler
+from launch.actions import IncludeLaunchDescription, TimerAction, RegisterEventHandler, DeclareLaunchArgument
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from launch.event_handlers import OnProcessExit
 
@@ -15,6 +17,14 @@ def generate_launch_description():
     pkg_path_localization = get_package_share_directory("rmitbot_localization")
     pkg_path_mapping = get_package_share_directory("rmitbot_mapping")
     pkg_path_navigation = get_package_share_directory("rmitbot_navigation")
+    pkg_path_vision = get_package_share_directory("rmitbot_vision")
+    
+    # Declare launch argument for enabling vision
+    enable_vision_arg = DeclareLaunchArgument(
+        'enable_vision',
+        default_value='true',
+        description='Enable camera and AprilTag vision system'
+    )
     
     # Launch rviz
     display = IncludeLaunchDescription(
@@ -45,7 +55,7 @@ def generate_launch_description():
         os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
     )
     
-        # Launch the twistmux instead of keyboard node only
+    # Launch the twistmux instead of keyboard node only
     twistmux = IncludeLaunchDescription(
         os.path.join(pkg_path_navigation,"launch","twistmux.launch.py"),
     )
@@ -54,6 +64,11 @@ def generate_launch_description():
         os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
     )
     
+    # Launch vision system (camera + AprilTag detection)
+    vision = IncludeLaunchDescription(
+        os.path.join(pkg_path_vision,"launch","vision.launch.py"),
+        condition=IfCondition(LaunchConfiguration('enable_vision'))
+    )
     
     # Launch the navigation 10s after slamtoolbox, to make sure that a map is available
     navigation_delayed = TimerAction(
@@ -61,14 +76,16 @@ def generate_launch_description():
         actions=[navigation]
     )
     
-    # PC: display, twistmux, navigation_delayed
-    #RPI: controller, localization, rplidar, mapping
+    # PC: display, twistmux, navigation_delayed, vision
+    # RPI: controller, localization, rplidar, mapping, vision
     return LaunchDescription([
+        enable_vision_arg,
         display,
         # controller,
         twistmux,
         # localization,
         # rplidar, 
-        # mapping, 
+        # mapping,
+        vision, 
         navigation_delayed, 
     ])

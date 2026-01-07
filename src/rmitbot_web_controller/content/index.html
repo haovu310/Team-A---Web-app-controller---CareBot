@@ -33,8 +33,9 @@
         <!-- Left Column: Vision -->
         <section class="camera-card">
             <div class="stream-wrapper">
-                <!-- Replace src with actual stream URL later -->
-                <img src="" id="streaming" alt="Waiting for Camera Signal...">
+                <!-- Camera stream from camera_stream node -->
+                <img src="http://localhost:8001/camera/stream" id="streaming" alt="Waiting for Camera Signal..."
+                    onerror="this.alt='Camera Offline'">
                 <div class="camera-overlay">Live Feed</div>
             </div>
         </section>
