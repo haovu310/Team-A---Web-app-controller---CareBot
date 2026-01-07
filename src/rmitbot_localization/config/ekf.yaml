@@ -3,10 +3,10 @@ ekf_filter_node:
       frequency: 30.0
       two_d_mode: true
       publish_tf: true
-      use_sim_time: false #true
+      use_sim_time: true
       map_frame: map              # Defaults to "map" if unspecified
       odom_frame: odom            # Defaults to "odom" if unspecified
-      base_link_frame: base_link # Base of the robot
+      base_link_frame: base_footprint # Base of the robot
       world_frame: odom           # Defaults to the value of odom_frame if unspecified
 
       # IMU Configuration

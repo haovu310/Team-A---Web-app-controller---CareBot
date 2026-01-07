@@ -35,6 +35,33 @@ def generate_launch_description():
     web_controller = IncludeLaunchDescription(
         os.path.join(pkg_path_web, "launch", "web.launch.py"),
     )
+    
+    # Launch Twist Mux (routes cmd_vel_keyboard -> cmd_vel)
+    twistmux = IncludeLaunchDescription(
+        os.path.join(pkg_path_navigation, "launch", "twistmux.launch.py"),
+    )
+    
+    # Launch Localization (EKF)
+    localization = IncludeLaunchDescription(
+        os.path.join(pkg_path_localization, "launch", "localization.launch.py"),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
+    
+    # Launch Mapping (SLAM Toolbox)
+    mapping = IncludeLaunchDescription(
+        os.path.join(pkg_path_mapping, "launch", "mapping.launch.py"),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
+    
+    # Launch Navigation (Nav2) - delayed to ensure SLAM has a map
+    navigation = IncludeLaunchDescription(
+        os.path.join(pkg_path_navigation, "launch", "nav.launch.py"),
+    )
+    
+    navigation_delayed = TimerAction(
+        period = 10.0,
+        actions=[navigation]
+    )
 
     # Launch RViz
     display = IncludeLaunchDescription(
@@ -46,5 +73,9 @@ def generate_launch_description():
         gazebo,
         controller_delayed,
         web_controller,
+        twistmux,
+        localization,
+        mapping,
+        navigation_delayed,
         display
     ])
