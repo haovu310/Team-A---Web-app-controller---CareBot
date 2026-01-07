@@ -477,4 +477,47 @@ document.getElementById('btn-save-map').addEventListener('click', function () {
     });
 });
 
+// Load Map Service Client
+var loadMapClient = new ROSLIB.Service({
+    ros: ros,
+    name: '/slam_toolbox/deserialize_map',
+    serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
+});
+
+document.getElementById('btn-load-map').addEventListener('click', function () {
+    var name = document.getElementById('load-map-name').value;
+    if (!name) {
+        alert('Please enter a map name to load');
+        return;
+    }
+
+    // The map files should be in ~/.ros/ directory
+    // slam_toolbox expects the filename without extension
+    var request = new ROSLIB.ServiceRequest({
+        filename: name,
+        match_type: 1  // 1 = START_AT_FIRST_NODE
+    });
+
+    var statusSpan = document.getElementById('load-map-status');
+    statusSpan.innerText = "Loading...";
+    statusSpan.style.color = "#636E72";
+
+    loadMapClient.callService(request, function (result) {
+        console.log('Map loaded successfully: ' + result);
+        statusSpan.innerText = "Map Loaded Successfully!";
+        statusSpan.style.color = "var(--success)";
+
+        setTimeout(() => {
+            statusSpan.innerText = "";
+        }, 3000);
+    }, function (error) {
+        console.error(error);
+        statusSpan.innerText = "Error Loading Map - Check map exists in ~/.ros/";
+        statusSpan.style.color = "var(--danger)";
+
+        setTimeout(() => {
+            statusSpan.innerText = "";
+        }, 5000);
+    });
+});
 
