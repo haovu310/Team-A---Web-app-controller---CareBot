@@ -49,7 +49,7 @@ def generate_launch_description():
             ])
         ),
         launch_arguments={
-            'use_sim_time': True,
+            'use_sim_time': False,
             'params_file': nav_config_file,
             # 'autostart': 'False',
             # 'use_composition': 'True',
