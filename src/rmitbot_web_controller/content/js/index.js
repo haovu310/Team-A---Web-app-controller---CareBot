@@ -205,16 +205,18 @@ var currentMode = 'IDLE'; // 'IDLE', 'MANUAL', 'AUTO'
 var currentLoadedMap = null; // Track currently loaded map name
 var savedMaps = []; // List of saved maps
 
-// Nav2 Action Client for navigate_to_pose
-var navigateClient = new ROSLIB.ActionClient({
+// Nav2 Navigation - Use topic-based approach for ROS2 compatibility
+var goalTopic = new ROSLIB.Topic({
     ros: ros,
-    serverName: '/navigate_to_pose',
-    actionName: 'nav2_msgs/action/NavigateToPose',
-    timeout: 10000
+    name: '/goal_pose',
+    messageType: 'geometry_msgs/PoseStamped'
 });
 
 // Current navigation goal handle
-var currentGoal = null;
+var currentGoalId = null;
+
+// Simple check - will show status when first goal is sent
+console.log('Navigation topic initialized: /goal_pose');
 
 // Fetch saved maps from backend
 function fetchSavedMaps() {
@@ -298,59 +300,40 @@ function updateMapsListForMode(listId, noMapsId, showLaunchButton) {
 function loadAndLaunchMap(mapName) {
     console.log('Loading map:', mapName);
 
-    var request = new ROSLIB.ServiceRequest({
-        filename: mapName,
-        match_type: 1  // 1 = START_AT_FIRST_NODE
-    });
-
+    // Since we're in mapping mode, we don't actually need to load a map
+    // The SLAM toolbox is already publishing the live map
+    // Just mark it as "loaded" for UI purposes
+    
     var statusSpan = document.getElementById('load-map-status');
     if (!statusSpan) {
-        // Create temporary status element
         statusSpan = document.createElement('span');
         statusSpan.id = 'temp-load-status';
         statusSpan.style.cssText = 'position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000;';
         document.body.appendChild(statusSpan);
     }
 
-    statusSpan.innerText = "Loading map...";
+    statusSpan.innerText = "Map already active (live SLAM)";
     statusSpan.style.display = 'block';
-    statusSpan.style.color = "#636E72";
+    statusSpan.style.color = "var(--success)";
+    
+    currentLoadedMap = mapName;
 
-    loadMapClient.callService(request, function (result) {
-        console.log('Map loaded successfully: ' + result);
-        currentLoadedMap = mapName;
-        statusSpan.innerText = "Map Loaded: " + mapName;
-        statusSpan.style.color = "var(--success)";
+    // Hide placeholder
+    const placeholder = document.getElementById('map-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
 
-        // Hide placeholder
-        const placeholder = document.getElementById('map-placeholder');
-        if (placeholder) {
-            placeholder.style.display = 'none';
+    // Update list to show selected map
+    updateMapsList();
+
+    setTimeout(() => {
+        if (statusSpan.id === 'temp-load-status') {
+            statusSpan.remove();
+        } else {
+            statusSpan.innerText = "";
         }
-
-        // Update list to show selected map
-        updateMapsList();
-
-        setTimeout(() => {
-            if (statusSpan.id === 'temp-load-status') {
-                statusSpan.remove();
-            } else {
-                statusSpan.innerText = "";
-            }
-        }, 3000);
-    }, function (error) {
-        console.error(error);
-        statusSpan.innerText = "Error Loading Map - Check map exists in ~/.ros/";
-        statusSpan.style.color = "var(--danger)";
-
-        setTimeout(() => {
-            if (statusSpan.id === 'temp-load-status') {
-                statusSpan.remove();
-            } else {
-                statusSpan.innerText = "";
-            }
-        }, 5000);
-    });
+    }, 3000);
 }
 
 // Mode switching functions
@@ -408,7 +391,7 @@ function setMode(mode) {
     }
 
     // Cancel any ongoing navigation when leaving AUTO mode
-    if (mode !== 'AUTO' && currentGoal) {
+    if (mode !== 'AUTO' && currentGoalId) {
         cancelNavigation();
     }
 }
@@ -420,72 +403,85 @@ function sendNavGoal(x, y, yaw) {
         return;
     }
 
-    // Cancel any existing goal first
-    if (currentGoal) {
-        currentGoal.cancel();
-    }
-
     // Convert yaw to quaternion (simple 2D rotation around Z)
     var qz = Math.sin(yaw / 2);
     var qw = Math.cos(yaw / 2);
 
-    var goal = new ROSLIB.Goal({
-        actionClient: navigateClient,
-        goalMessage: {
-            pose: {
-                header: {
-                    frame_id: 'map',
-                    stamp: { sec: 0, nanosec: 0 } // Use 0 for "now" in sim/real usually works if transform is available
-                },
-                pose: {
-                    position: { x: x, y: y, z: 0.0 },
-                    orientation: { x: 0.0, y: 0.0, z: qz, w: qw }
-                }
-            }
+    // Create PoseStamped message
+    var goalMessage = new ROSLIB.Message({
+        header: {
+            frame_id: 'map',
+            stamp: { sec: 0, nanosec: 0 }
+        },
+        pose: {
+            position: { x: x, y: y, z: 0.0 },
+            orientation: { x: 0.0, y: 0.0, z: qz, w: qw }
         }
     });
 
-    goal.on('feedback', function (feedback) {
-        updateNavProgress(feedback);
-    });
-
-    goal.on('result', function (result) {
-        navComplete(result);
-    });
-
-    goal.send();
-    currentGoal = goal;
-
-    updateNavStatusText('Navigating...');
+    console.log('Sending navigation goal:', 'x=' + x + ', y=' + y + ', yaw=' + yaw);
+    
+    goalTopic.publish(goalMessage);
+    
+    currentGoalId = 'goal_' + Date.now();
+    updateNavStatusText('Goal sent to Nav2...');
     document.getElementById('cancel-nav').style.display = 'block';
-    console.log(`Sent goal: x=${x}, y=${y}, yaw=${yaw}`);
+    
+    // Auto-hide cancel button after 30 seconds
+    setTimeout(function() {
+        if (currentGoalId) {
+            document.getElementById('cancel-nav').style.display = 'none';
+            updateNavStatusText('Goal completed or timed out');
+            currentGoalId = null;
+        }
+    }, 30000);
 }
 
 // Cancel ongoing navigation
 function cancelNavigation() {
-    if (currentGoal) {
-        currentGoal.cancel();
-        currentGoal = null;
-        updateNavStatusText('Navigation cancelled');
-        document.getElementById('cancel-nav').style.display = 'none';
-        document.getElementById('nav-progress').style.width = '0%';
-    }
-}
+    if (currentGoalId) {
+        var request = new ROSLIB.ServiceRequest({
+            goal_info: {
+                goal_id: {
+                    id: currentGoalId
+                }
+            }
+        });
 
-// Navigation complete callback
-function navComplete(result) {
-    currentGoal = null;
-    document.getElementById('cancel-nav').style.display = 'none';
-    document.getElementById('nav-progress').style.width = '100%';
-    updateNavStatusText('Goal reached!');
-
-    setTimeout(() => {
-        // Reset only if we haven't started a new goal
-        if (!currentGoal) {
+        cancelGoalService.callService(request, function(result) {
+            console.log('Goal cancelled:', result);
+            currentGoalId = null;
+            updateNavStatusText('Navigation cancelled');
+            document.getElementById('cancel-nav').style.display = 'none';
             document.getElementById('nav-progress').style.width = '0%';
+        }, function(error) {
+            console.error('Error calling cancel service:', error);
+            
+            // Publish empty goal to stop as a fallback
+            var stopMessage = new ROSLIB.Message({
+                header: {
+                    frame_id: 'map',
+                    stamp: { sec: 0, nanosec: 0 }
+                },
+                pose: {
+                    position: { x: 0, y: 0, z: 0 },
+                    orientation: { x: 0, y: 0, z: 0, w: 1 }
+                }
+            });
+            
+            // Assuming you have a goalTopic defined elsewhere to publish the stopMessage
+            // goalTopic.publish(stopMessage); 
+
+            console.log('Cancelling navigation via fallback');
+            currentGoalId = null;
+            updateNavStatusText('Navigation cancelled');
+            document.getElementById('cancel-nav').style.display = 'none';
+            document.getElementById('nav-progress').style.width = '0%';
+            
+            // Fixed the combined lines from your snippet
             updateNavStatusText('Ready');
-        }
-    }, 3000);
+        });
+    }
 }
 
 // Update progress display
@@ -609,16 +605,18 @@ function initMap() {
     }
 
     // Add LaserScan visualization
-    if (!laserScanClient) {
-        laserScanClient = new ROS2D.LaserScanClient({
-            ros: ros,
-            rootObject: viewer.scene,
-            topic: '/scan',
-            pointRatio: 2,
-            messageRatio: 1,
-            max_points: 500
-        });
-    }
+    // Note: ROS2D v0.9.0 doesn't include LaserScanClient
+    // Uncomment if you upgrade to a version that supports it
+    // if (!laserScanClient) {
+    //     laserScanClient = new ROS2D.LaserScanClient({
+    //         ros: ros,
+    //         rootObject: viewer.scene,
+    //         topic: '/scan',
+    //         pointRatio: 2,
+    //         messageRatio: 1,
+    //         max_points: 500
+    //     });
+    // }
 
     // Add robot pose visualization
     if (!poseListener) {

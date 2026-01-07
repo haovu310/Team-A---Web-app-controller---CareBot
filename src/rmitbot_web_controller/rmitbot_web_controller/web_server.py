@@ -27,22 +27,38 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def handle_list_maps(self):
-        """List all saved maps from ~/.ros directory"""
+        """List all saved maps from ~/.ros directory and workspace directory"""
         try:
-            # Get the ~/.ros directory
+            maps = set()  # Use set to avoid duplicates
+            
+            # Check ~/.ros directory for SLAM Toolbox maps
             ros_dir = Path.home() / '.ros'
-
-            if not ros_dir.exists():
-                maps = []
-            else:
-                # Find all .posegraph files (slam_toolbox saves maps as .posegraph and .data)
+            if ros_dir.exists():
                 posegraph_files = list(ros_dir.glob('*.posegraph'))
-                # Extract just the base names (without extension)
-                maps = [f.stem for f in posegraph_files]
+                for f in posegraph_files:
+                    if f.stat().st_size > 0:
+                        maps.add(f.stem)
+            
+            # Check multiple possible workspace locations
+            possible_workspace_dirs = [
+                Path('/home/hao/Documents/App Control/team_A_web_app'),
+                Path.home() / 'Documents' / 'App Control' / 'team_A_web_app',
+                Path.cwd().parent.parent.parent.parent.parent,
+            ]
+            
+            for workspace_dir in possible_workspace_dirs:
+                if workspace_dir.exists():
+                    yaml_files = list(workspace_dir.glob('*.yaml'))
+                    for f in yaml_files:
+                        pgm_file = f.with_suffix('.pgm')
+                        if pgm_file.exists() and f.stat().st_size > 0:
+                            maps.add(f.stem)
+                    if yaml_files:  # Found maps, stop searching
+                        break
 
             # Return JSON response
             response = {
-                'maps': sorted(maps),
+                'maps': sorted(list(maps)),
                 'count': len(maps)
             }
 
