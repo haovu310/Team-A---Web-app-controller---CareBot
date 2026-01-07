@@ -458,6 +458,8 @@ document.getElementById('btn-save-map').addEventListener('click', function () {
         return;
     }
 
+    // SLAM toolbox saves to ~/.ros/ by default
+    // The service expects just the name, it will create .posegraph and .data files
     var request = new ROSLIB.ServiceRequest({
         name: { data: name }
     });
@@ -468,16 +470,20 @@ document.getElementById('btn-save-map').addEventListener('click', function () {
 
     saveMapClient.callService(request, function (result) {
         console.log('Result for service call on ' + saveMapClient.name + ': ' + result);
-        statusSpan.innerText = "Map Saved Successfully!";
+        statusSpan.innerText = "Map Saved Successfully! (Check ~/.ros/" + name + ".*)";
         statusSpan.style.color = "var(--success)";
 
         setTimeout(() => {
             statusSpan.innerText = "";
-        }, 3000);
+        }, 5000);
     }, function (error) {
         console.error(error);
-        statusSpan.innerText = "Error Saving Map";
+        statusSpan.innerText = "Error Saving Map - Is SLAM running in mapping mode?";
         statusSpan.style.color = "var(--danger)";
+        
+        setTimeout(() => {
+            statusSpan.innerText = "";
+        }, 5000);
     });
 });
 
