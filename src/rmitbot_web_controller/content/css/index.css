@@ -655,3 +655,140 @@ footer {
     font-size: 0.9rem;
     color: var(--text-muted);
 }
+
+/* Saved Maps Section */
+.saved-maps-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--bg-color);
+    border-radius: 12px;
+}
+
+.saved-maps-section h3 {
+    margin: 0 0 0.8rem 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.maps-list-container {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.no-maps-message {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 10px;
+    margin: 0;
+}
+
+.maps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.map-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.map-item:hover {
+    border-color: var(--primary-color);
+    background: #fff;
+}
+
+.map-item.selected {
+    border-color: var(--primary-dark);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);
+}
+
+.map-item-name {
+    font-weight: 500;
+    color: var(--text-color);
+    flex: 1;
+}
+
+.map-item-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-launch-map {
+    padding: 6px 12px;
+    background: var(--primary-dark);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-launch-map:hover {
+    background: #ff4d94;
+    transform: scale(1.05);
+}
+
+.btn-refresh-maps {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-color);
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    color: var(--text-color);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-refresh-maps:hover {
+    border-color: var(--primary-dark);
+    background: white;
+}
+
+.btn-refresh-maps i {
+    transition: transform 0.3s ease;
+}
+
+.btn-refresh-maps:hover i {
+    transform: rotate(180deg);
+}
+
+/* Map Placeholder */
+.map-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #999;
+    z-index: 1;
+}
+
+.map-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+#map-canvas:not(:empty) + .map-placeholder {
+    display: none;
+}
