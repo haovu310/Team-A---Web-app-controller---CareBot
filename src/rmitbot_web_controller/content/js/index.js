@@ -1,7 +1,7 @@
 // CareBot Controller Logic
 
 // ROS Connection - Connect to Pi's rosbridge
-var rosHost = '172.20.10.4'; // Pi IP address
+var rosHost = window.location.hostname; // Dynamic host
 var ros = new ROSLIB.Ros({
     url: 'ws://' + rosHost + ':9090'
 });

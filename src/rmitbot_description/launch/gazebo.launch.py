@@ -17,6 +17,9 @@ def generate_launch_description():
     # Path to the package
     pkg_path_description = get_package_share_directory("rmitbot_description")
     
+    # Path to the world file
+    world_path = os.path.join(pkg_path_description, 'world', 'room_8x8.world')
+    
     # Resource path for gazebo. Required while using stl (robot CAD), and sdf (world)
     gz_resource_path = SetEnvironmentVariable(
         name="GZ_SIM_RESOURCE_PATH",
@@ -27,7 +30,7 @@ def generate_launch_description():
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [os.path.join(get_package_share_directory("ros_gz_sim"), "launch"), "/gz_sim.launch.py"]),
-        launch_arguments=[("gz_args", [" -v 4", " -r", " empty.sdf", " --render-engine", " ogre"])]
+        launch_arguments=[("gz_args", ["-r -v 4 '", world_path, "' --render-engine ogre"])]
     )
     
     # Spawn the robot in Gazebo
@@ -42,7 +45,10 @@ def generate_launch_description():
     gz_ros2_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"], 
+        arguments=[ "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock", 
+                    "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU", 
+                    "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+                    ], 
     )
 
     return LaunchDescription([

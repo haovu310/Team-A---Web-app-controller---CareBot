@@ -8,7 +8,7 @@ find_package(ament_cmake REQUIRED)
 # =======================================
 # Folder to be added for compilation
 install(
-  DIRECTORY meshes urdf launch rviz
+  DIRECTORY meshes urdf launch rviz world
   DESTINATION share/${PROJECT_NAME}
 )
 # =======================================

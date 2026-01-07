@@ -1,12 +1,11 @@
 <?xml version="1.0"?>
-
+<!-- SIMULATION ONLY URDF - Uses GazeboSimSystem hardware plugin -->
 <robot name="rmitbot"
     xmlns:xacro="http://ros.org/wiki/xacro">
-    <xacro:arg name="use_sim" default="false"/>
 
     <xacro:include filename="$(find rmitbot_description)/urdf/rmitbot_platform.xacro" />
     <xacro:include filename="$(find rmitbot_description)/urdf/rmitbot_gazebo.xacro" />
-    <xacro:include filename="$(find rmitbot_description)/urdf/rmitbot_ros2_control.xacro" /> 
+    <xacro:include filename="$(find rmitbot_description)/urdf/rmitbot_ros2_control_sim.xacro" /> 
     <xacro:include filename="$(find rmitbot_description)/urdf/rmitbot_imu.xacro" />
     <xacro:include filename="$(find rmitbot_description)/urdf/rmitbot_camera.xacro" /> 
 
