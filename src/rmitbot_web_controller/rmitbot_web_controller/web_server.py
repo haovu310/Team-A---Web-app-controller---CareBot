@@ -27,9 +27,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def handle_list_maps(self):
-        """List all saved maps from ~/.ros directory and workspace directory"""
+        """List all saved maps from ~/.ros directory and workspace"""
         try:
-            maps = set()  # Use set to avoid duplicates
+            maps = []  # List of dicts with map info
             
             # Check ~/.ros directory for SLAM Toolbox maps
             ros_dir = Path.home() / '.ros'
@@ -37,28 +37,40 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 posegraph_files = list(ros_dir.glob('*.posegraph'))
                 for f in posegraph_files:
                     if f.stat().st_size > 0:
-                        maps.add(f.stem)
-            
-            # Check multiple possible workspace locations
+                        maps.append({
+                            'name': f.stem,
+                            'type': 'slam_toolbox',
+                            'loadable': True,
+                            'location': '~/.ros/'
+                        })
+
+            # ALSO check workspace directory (where SLAM Toolbox actually saves)
             possible_workspace_dirs = [
                 Path('/home/hao/Documents/App Control/team_A_web_app'),
                 Path.home() / 'Documents' / 'App Control' / 'team_A_web_app',
-                Path.cwd().parent.parent.parent.parent.parent,
+                Path.cwd(),
             ]
             
             for workspace_dir in possible_workspace_dirs:
                 if workspace_dir.exists():
-                    yaml_files = list(workspace_dir.glob('*.yaml'))
-                    for f in yaml_files:
-                        pgm_file = f.with_suffix('.pgm')
-                        if pgm_file.exists() and f.stat().st_size > 0:
-                            maps.add(f.stem)
-                    if yaml_files:  # Found maps, stop searching
+                    posegraph_files = list(workspace_dir.glob('*.posegraph'))
+                    for f in posegraph_files:
+                        if f.stat().st_size > 0:
+                            # Avoid duplicates
+                            if not any(m['name'] == f.stem for m in maps):
+                                maps.append({
+                                    'name': f.stem,
+                                    'type': 'slam_toolbox',
+                                    'loadable': True,
+                                    'location': str(workspace_dir)
+                                })
+                    if posegraph_files:  # Found maps, stop searching
                         break
 
             # Return JSON response
             response = {
-                'maps': sorted(list(maps)),
+                'maps': [m['name'] for m in maps],  # Just names for backward compatibility
+                'map_details': maps,  # Detailed info
                 'count': len(maps)
             }
 

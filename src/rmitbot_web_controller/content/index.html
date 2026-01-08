@@ -68,37 +68,44 @@
                 <div class="user-manual-section" id="user-manual-section">
                     <h3><i class="fas fa-book"></i> System Instructions</h3>
                     <div class="manual-content">
-                        <p><strong>1. Manual Mode:</strong></p>
+                        <p><strong><i class="fas fa-hand-pointer"></i> Manual Mode:</strong></p>
                         <ul>
-                            <li>Use <strong>WASD</strong> keys or on-screen D-Pad to drive.</li>
-                            <li>Explore the area to build a map.</li>
-                            <li>Use <strong>Map Management</strong> below to SAVE your map.</li>
+                            <li><strong>Keyboard:</strong> Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> keys to
+                                drive, <kbd>Q</kbd><kbd>E</kbd> to rotate, <kbd>Space</kbd> to stop</li>
+                            <li><strong>D-Pad:</strong> Click and hold directional buttons for precise control</li>
+                            <li><strong>Speed Control:</strong> Adjust slider between 0-1.0 m/s</li>
+                            <li><strong>Building Maps:</strong> Drive around to create a map with SLAM. Save it from the
+                                map selector</li>
                         </ul>
-                        <p><strong>2. Auto Mode:</strong></p>
-                        <ul>
-                            <li>Select a saved map from the list or click on the map to navigate.</li>
-                            <li>Enter <strong>Custom Goal</strong> coordinates (X, Y, Yaw).</li>
-                            <li>Click <strong>GO</strong> to start autonomous navigation.</li>
-                        </ul>
-                        <p><strong>3. Map Management:</strong></p>
-                        <ul>
-                            <li>Save maps after building them in Manual mode.</li>
-                            <li>Review saved maps in the list below.</li>
-                        </ul>
-                    </div>
-                </div>
 
-                <!-- Saved Maps List (IDLE Mode - Read Only) -->
-                <div class="saved-maps-section" id="saved-maps-section-idle" style="display: none;">
-                    <h3>Saved Maps</h3>
-                    <div class="maps-list-container" id="maps-list-container-idle">
-                        <p class="no-maps-message" id="no-maps-message-idle">No saved maps available</p>
-                        <div class="maps-list" id="maps-list-idle">
-                            <!-- Maps will be populated here dynamically -->
-                        </div>
+                        <p><strong><i class="fas fa-route"></i> Auto Mode:</strong></p>
+                        <ul>
+                            <li><strong>Load Map:</strong> Click "Manage Maps" to select and load a saved map</li>
+                            <li><strong>Set Goals:</strong> Enter coordinates (X, Y, Yaw) or click on the map
+                                visualization</li>
+                            <li><strong>Navigation:</strong> Click GO to start. Watch progress bar and distance feedback
+                            </li>
+                            <li><strong>Cancel:</strong> Click "Cancel Navigation" anytime to stop</li>
+                        </ul>
+
+                        <p><strong><i class="fas fa-map"></i> Map Management:</strong></p>
+                        <ul>
+                            <li><strong>View Maps:</strong> Click "Manage Maps" to see all saved maps</li>
+                            <li><strong>Load Map:</strong> Select from list to load for navigation</li>
+                            <li><strong>Preview:</strong> View map before loading (coming soon)</li>
+                        </ul>
+
+                        <p><strong><i class="fas fa-info-circle"></i> System Features:</strong></p>
+                        <ul>
+                            <li><strong>Camera Feed:</strong> Live video from robot's front camera</li>
+                            <li><strong>Map View:</strong> Real-time SLAM visualization showing robot position</li>
+                            <li><strong>Status Indicator:</strong> Green dot = Connected, Red dot = Offline</li>
+                            <li><strong>Mode Badge:</strong> Shows current operation mode (top-right header)</li>
+                        </ul>
                     </div>
-                    <button class="btn-refresh-maps" id="btn-refresh-maps-idle">
-                        <i class="fas fa-sync-alt"></i> Refresh Maps
+
+                    <button class="btn-manage-maps" id="btn-manage-maps">
+                        <i class="fas fa-folder-open"></i> Manage Maps
                     </button>
                 </div>
 
@@ -150,16 +157,6 @@
                 </button>
             </div>
 
-            <!-- Persistent Mapping Tools -->
-            <div class="mapping-card">
-                <h2>Map Management</h2>
-                <div class="mapping-controls">
-                    <input type="text" id="map-name" placeholder="Save as..." value="my_map">
-                    <button class="btn-save-map" id="btn-save-map">Save</button>
-                </div>
-                <span id="save-map-status"></span>
-            </div>
-
             <div class="speed-section">
                 <h2>Speed Control</h2>
                 <div class="speed-group">
@@ -186,20 +183,74 @@
                     <button class="btn-ctrl" id="backward"><i class="fas fa-chevron-down"></i></button>
                     <button class="btn-ctrl btn-diag" id="diag_back_right">↘</button>
                 </div>
-
-                <div class="rotation-group">
-                    <button class="btn-calm" id="rotateL"><i class="fas fa-undo"></i> Spin Left</button>
-                    <button class="btn-calm" id="rotateR">Spin Right <i class="fas fa-redo"></i></button>
+                <div class="spin-controls">
+                    <button class="btn-spin" id="spin_left"><i class="fas fa-undo"></i> Spin Left</button>
+                    <button class="btn-spin" id="spin_right">Spin Right <i class="fas fa-redo"></i></button>
                 </div>
+            </div>
+
+            <!-- Save Map Section (visible in MANUAL mode) -->
+            <div class="save-map-section" id="save-map-section" style="display: none;">
+                <h2><i class="fas fa-save"></i> Save Map</h2>
+                <p class="help-text">Save the map you're building right now</p>
+                <div class="save-map-controls">
+                    <input type="text" id="manual-map-name" placeholder="Enter map name..." value="">
+                    <button class="btn-save-primary" id="btn-save-manual-map">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+                <span class="status-message" id="manual-save-status"></span>
             </div>
         </section>
     </main>
+
+    <!-- Map Management Modal -->
+    <div class="modal-overlay" id="maps-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-map"></i> Map Management</h2>
+                <button class="modal-close" id="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Search Maps Section -->
+                <div class="modal-section">
+                    <h3><i class="fas fa-search"></i> Search Maps</h3>
+                    <input type="text" id="modal-search-maps" class="search-maps-input"
+                        placeholder="Type to filter maps...">
+                </div>
+
+                <!-- Saved Maps List -->
+                <div class="modal-section">
+                    <h3><i class="fas fa-list"></i> Saved Maps</h3>
+                    <div class="modal-maps-list" id="modal-maps-list">
+                        <p class="loading-message">Loading maps...</p>
+                    </div>
+                </div>
+
+                <!-- Save Map Section (at bottom) -->
+                <div class="modal-section">
+                    <h3><i class="fas fa-save"></i> Save Current Map</h3>
+                    <p class="help-text">Save the map you're currently building in Manual mode</p>
+                    <div class="save-map-control">
+                        <input type="text" id="modal-map-name" placeholder="Enter map name..." value="">
+                        <button class="btn-primary" id="btn-modal-save-map">
+                            <i class="fas fa-save"></i> Save
+                        </button>
+                    </div>
+                    <span class="status-message" id="modal-save-status"></span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <footer>
         CareBot System v1.0 | Hospital Unit A | Shortcuts: WASD = Move, Space = E-Stop
     </footer>
 
-    <script src="js/index.js?v=4"></script>
+    <script src="js/index.js?v=9"></script>
 </body>
 
 </html>

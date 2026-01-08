@@ -303,7 +303,7 @@ function loadAndLaunchMap(mapName) {
     // Since we're in mapping mode, we don't actually need to load a map
     // The SLAM toolbox is already publishing the live map
     // Just mark it as "loaded" for UI purposes
-    
+
     var statusSpan = document.getElementById('load-map-status');
     if (!statusSpan) {
         statusSpan = document.createElement('span');
@@ -315,7 +315,7 @@ function loadAndLaunchMap(mapName) {
     statusSpan.innerText = "Map already active (live SLAM)";
     statusSpan.style.display = 'block';
     statusSpan.style.color = "var(--success)";
-    
+
     currentLoadedMap = mapName;
 
     // Hide placeholder
@@ -347,23 +347,16 @@ function setMode(mode) {
         document.getElementById('custom-goal-section').style.display = 'block';
         document.getElementById('nav-status').style.display = 'block';
         document.getElementById('user-manual-section').style.display = 'none';
-        document.getElementById('saved-maps-section').style.display = 'block';
-        document.getElementById('saved-maps-section-idle').style.display = 'none';
 
-        // Disable manual movement controls visually
-        document.querySelector('.movement-section').style.display = 'none'; // Completely hide in Auto
+        // Hide manual movement controls in Auto
+        document.querySelector('.movement-section').style.display = 'none';
         document.querySelector('.speed-section').style.display = 'none';
-
-        // Fetch maps for AUTO mode
-        fetchSavedMaps();
 
     } else if (mode === 'MANUAL') {
         document.getElementById('waypoints-section').style.display = 'none';
         document.getElementById('custom-goal-section').style.display = 'none';
         document.getElementById('nav-status').style.display = 'none';
         document.getElementById('user-manual-section').style.display = 'none';
-        document.getElementById('saved-maps-section').style.display = 'none';
-        document.getElementById('saved-maps-section-idle').style.display = 'none';
 
         // Enable manual movement in MANUAL mode
         document.querySelector('.movement-section').style.display = 'block';
@@ -374,20 +367,20 @@ function setMode(mode) {
         document.querySelector('.speed-section').style.opacity = '1';
         document.querySelector('.speed-section').style.pointerEvents = 'auto';
 
+        // Show save map section in MANUAL mode
+        document.getElementById('save-map-section').style.display = 'block';
+
     } else {
-        // IDLE: Show Manual and saved maps list
+        // IDLE: Show manual only
         document.getElementById('waypoints-section').style.display = 'none';
         document.getElementById('custom-goal-section').style.display = 'none';
         document.getElementById('nav-status').style.display = 'none';
         document.getElementById('user-manual-section').style.display = 'block';
-        document.getElementById('saved-maps-section').style.display = 'none';
-        document.getElementById('saved-maps-section-idle').style.display = 'block';
 
+        // HIDE speed and movement controls in IDLE
         document.querySelector('.movement-section').style.display = 'none';
         document.querySelector('.speed-section').style.display = 'none';
-
-        // Fetch maps for IDLE mode
-        fetchSavedMaps();
+        document.getElementById('save-map-section').style.display = 'none';
     }
 
     // Cancel any ongoing navigation when leaving AUTO mode
@@ -420,15 +413,15 @@ function sendNavGoal(x, y, yaw) {
     });
 
     console.log('Sending navigation goal:', 'x=' + x + ', y=' + y + ', yaw=' + yaw);
-    
+
     goalTopic.publish(goalMessage);
-    
+
     currentGoalId = 'goal_' + Date.now();
     updateNavStatusText('Goal sent to Nav2...');
     document.getElementById('cancel-nav').style.display = 'block';
-    
+
     // Auto-hide cancel button after 30 seconds
-    setTimeout(function() {
+    setTimeout(function () {
         if (currentGoalId) {
             document.getElementById('cancel-nav').style.display = 'none';
             updateNavStatusText('Goal completed or timed out');
@@ -448,15 +441,15 @@ function cancelNavigation() {
             }
         });
 
-        cancelGoalService.callService(request, function(result) {
+        cancelGoalService.callService(request, function (result) {
             console.log('Goal cancelled:', result);
             currentGoalId = null;
             updateNavStatusText('Navigation cancelled');
             document.getElementById('cancel-nav').style.display = 'none';
             document.getElementById('nav-progress').style.width = '0%';
-        }, function(error) {
+        }, function (error) {
             console.error('Error calling cancel service:', error);
-            
+
             // Publish empty goal to stop as a fallback
             var stopMessage = new ROSLIB.Message({
                 header: {
@@ -468,7 +461,7 @@ function cancelNavigation() {
                     orientation: { x: 0, y: 0, z: 0, w: 1 }
                 }
             });
-            
+
             // Assuming you have a goalTopic defined elsewhere to publish the stopMessage
             // goalTopic.publish(stopMessage); 
 
@@ -477,7 +470,7 @@ function cancelNavigation() {
             updateNavStatusText('Navigation cancelled');
             document.getElementById('cancel-nav').style.display = 'none';
             document.getElementById('nav-progress').style.width = '0%';
-            
+
             // Fixed the combined lines from your snippet
             updateNavStatusText('Ready');
         });
@@ -570,7 +563,7 @@ function initMap() {
         });
 
         // Add click handler for 2D Goal Pose in AUTO mode
-        viewer.scene.addEventListener('stagemousedown', function(event) {
+        viewer.scene.addEventListener('stagemousedown', function (event) {
             if (currentMode === 'AUTO') {
                 // Convert screen coordinates to map coordinates
                 var mousePos = viewer.scene.globalToRos(event.stageX, event.stageY);
@@ -633,7 +626,7 @@ function initMap() {
             messageType: 'geometry_msgs/PoseWithCovarianceStamped'
         });
 
-        poseListener.subscribe(function(message) {
+        poseListener.subscribe(function (message) {
             var pose = message.pose.pose;
             var rosPos = new ROSLIB.Vector3(pose.position);
             var viewerPos = viewer.scene.rosToCanvas(rosPos);
@@ -665,43 +658,54 @@ var saveMapClient = new ROSLIB.Service({
     serviceType: 'slam_toolbox/srv/SaveMap'
 });
 
-document.getElementById('btn-save-map').addEventListener('click', function () {
-    var name = document.getElementById('map-name').value;
-    if (!name) {
-        alert('Please enter a map name');
-        return;
-    }
+// Save map from MANUAL mode
+const btnSaveManualMap = document.getElementById('btn-save-manual-map');
+const manualMapName = document.getElementById('manual-map-name');
+const manualSaveStatus = document.getElementById('manual-save-status');
 
-    // SLAM toolbox saves to ~/.ros/ by default
-    // The service expects just the name, it will create .posegraph and .data files
-    var request = new ROSLIB.ServiceRequest({
-        name: { data: name }
+if (btnSaveManualMap) {
+    btnSaveManualMap.addEventListener('click', function () {
+        const name = manualMapName ? manualMapName.value.trim() : '';
+        if (!name) {
+            alert('Please enter a map name');
+            return;
+        }
+
+        var request = new ROSLIB.ServiceRequest({
+            name: { data: name }
+        });
+
+        if (manualSaveStatus) {
+            manualSaveStatus.innerText = "Saving...";
+            manualSaveStatus.style.color = "#636E72";
+        }
+
+        saveMapClient.callService(request, function (result) {
+            console.log('Map saved:', result);
+            if (manualSaveStatus) {
+                manualSaveStatus.innerText = `Map "${name}" saved successfully in ~/.ros/!`;
+                manualSaveStatus.style.color = "var(--success)";
+            }
+            if (manualMapName) manualMapName.value = '';
+
+            setTimeout(() => {
+                if (manualSaveStatus) manualSaveStatus.innerText = "";
+            }, 3000);
+        }, function (error) {
+            console.error('Save error:', error);
+            if (manualSaveStatus) {
+                manualSaveStatus.innerText = "Error saving map - Is SLAM running?";
+                manualSaveStatus.style.color = "var(--danger)";
+            }
+
+            setTimeout(() => {
+                if (manualSaveStatus) manualSaveStatus.innerText = "";
+            }, 5000);
+        });
     });
+}
 
-    var statusSpan = document.getElementById('save-map-status');
-    statusSpan.innerText = "Saving...";
-    statusSpan.style.color = "#636E72";
-
-    saveMapClient.callService(request, function (result) {
-        console.log('Result for service call on ' + saveMapClient.name + ': ' + result);
-        statusSpan.innerText = "Map Saved Successfully! (Check ~/.ros/" + name + ".*)";
-        statusSpan.style.color = "var(--success)";
-
-        // Refresh the maps list after successful save
-        setTimeout(() => {
-            fetchSavedMaps();
-            statusSpan.innerText = "";
-        }, 2000);
-    }, function (error) {
-        console.error(error);
-        statusSpan.innerText = "Error Saving Map - Is SLAM running in mapping mode?";
-        statusSpan.style.color = "var(--danger)";
-
-        setTimeout(() => {
-            statusSpan.innerText = "";
-        }, 5000);
-    });
-});
+// Old save map button removed - now handled in modal
 
 // Load Map Service Client
 var loadMapClient = new ROSLIB.Service({
@@ -710,6 +714,220 @@ var loadMapClient = new ROSLIB.Service({
     serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
 });
 
-// Refresh maps buttons
-document.getElementById('btn-refresh-maps').addEventListener('click', fetchSavedMaps);
-document.getElementById('btn-refresh-maps-idle').addEventListener('click', fetchSavedMaps);
+// Old refresh buttons removed - maps load automatically in modal
+
+// === MODAL MAP MANAGEMENT ===
+
+
+// Modal Elements
+const mapsModal = document.getElementById('maps-modal');
+const modalClose = document.getElementById('modal-close');
+const btnManageMaps = document.getElementById('btn-manage-maps');
+const modalMapsList = document.getElementById('modal-maps-list');
+const btnModalSaveMap = document.getElementById('btn-modal-save-map');
+const modalMapName = document.getElementById('modal-map-name');
+const modalSaveStatus = document.getElementById('modal-save-status');
+
+// Debug: Log if elements are found
+console.log('Modal elements check:', {
+    mapsModal: !!mapsModal,
+    modalClose: !!modalClose,
+    btnManageMaps: !!btnManageMaps,
+    modalMapsList: !!modalMapsList
+});
+
+// Open Modal
+function showMapsModal() {
+    console.log('showMapsModal called');
+    if (!mapsModal) {
+        console.error('Modal element not found!');
+        alert('Error: Modal not found. Please refresh the page.');
+        return;
+    }
+    mapsModal.style.display = 'flex';
+    loadMapsToModal();
+}
+
+// Close Modal
+function hideMapsModal() {
+    if (!mapsModal) return;
+    mapsModal.style.display = 'none';
+}
+
+// Event Listeners
+if (btnManageMaps) {
+    btnManageMaps.addEventListener('click', showMapsModal);
+    console.log('Manage Maps button event listener attached');
+} else {
+    console.error('btn-manage-maps element not found!');
+}
+
+if (modalClose) {
+    modalClose.addEventListener('click', hideMapsModal);
+} else {
+    console.error('modal-close element not found!');
+}
+
+// Close modal when clicking outside
+if (mapsModal) {
+    mapsModal.addEventListener('click', function (e) {
+        if (e.target === mapsModal) {
+            hideMapsModal();
+        }
+    });
+}
+
+// Load Maps into Modal
+function loadMapsToModal() {
+    if (!modalMapsList) {
+        console.error('modalMapsList element not found!');
+        return;
+    }
+
+    modalMapsList.innerHTML = '<p class="loading-message">Loading maps...</p>';
+
+    // Fetch from web server endpoint
+    fetch('http://' + rosHost + ':8000/list_maps')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Maps loaded:', data);
+            if (data.maps && data.maps.length > 0) {
+                let html = '';
+                data.maps.forEach(mapName => {
+                    html += `
+                        <div class="map-item">
+                            <span class="map-item-name">
+                                <i class="fas fa-map-marked-alt"></i>
+                                ${mapName}
+                            </span>
+                            <div class="map-item-actions">
+                                <button class="btn-load-map" onclick="loadMapFromModal('${mapName}')">
+                                    <i class="fas fa-download"></i> Load
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                modalMapsList.innerHTML = html;
+            } else {
+                modalMapsList.innerHTML = '<p class="loading-message">No saved maps found. Create maps in Manual mode first.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching maps:', error);
+            modalMapsList.innerHTML = '<p class="loading-message" style="color: var(--danger);">Error loading maps. Make sure web server is running.</p>';
+        });
+}
+
+// Search/Filter Maps
+const modalSearchInput = document.getElementById('modal-search-maps');
+if (modalSearchInput) {
+    modalSearchInput.addEventListener('input', function (e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const mapItems = modalMapsList.querySelectorAll('.map-item');
+
+        let visibleCount = 0;
+        mapItems.forEach(item => {
+            const mapName = item.querySelector('.map-item-name').textContent.toLowerCase();
+            if (mapName.includes(searchTerm)) {
+                item.style.display = 'flex';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Show message if no maps match
+        if (visibleCount === 0 && mapItems.length > 0) {
+            if (!document.getElementById('no-match-message')) {
+                const noMatch = document.createElement('p');
+                noMatch.id = 'no-match-message';
+                noMatch.className = 'loading-message';
+                noMatch.textContent = `No maps matching "${e.target.value}"`;
+                modalMapsList.appendChild(noMatch);
+            }
+        } else {
+            const noMatchMsg = document.getElementById('no-match-message');
+            if (noMatchMsg) noMatchMsg.remove();
+        }
+    });
+}
+
+// Save Map from Modal
+if (btnModalSaveMap) {
+    btnModalSaveMap.addEventListener('click', function () {
+        const name = modalMapName ? modalMapName.value.trim() : '';
+        if (!name) {
+            alert('Please enter a map name');
+            return;
+        }
+
+        var request = new ROSLIB.ServiceRequest({
+            name: { data: name }
+        });
+
+        if (modalSaveStatus) {
+            modalSaveStatus.innerText = "Saving...";
+            modalSaveStatus.style.color = "#636E72";
+        }
+
+        saveMapClient.callService(request, function (result) {
+            console.log('Map saved:', result);
+            if (modalSaveStatus) {
+                modalSaveStatus.innerText = "Map saved successfully!";
+                modalSaveStatus.style.color = "var(--success)";
+            }
+            if (modalMapName) modalMapName.value = '';
+
+            // Refresh the maps list
+            setTimeout(() => {
+                loadMapsToModal();
+                if (modalSaveStatus) modalSaveStatus.innerText = "";
+            }, 2000);
+        }, function (error) {
+            console.error('Save error:', error);
+            if (modalSaveStatus) {
+                modalSaveStatus.innerText = "Error saving map";
+                modalSaveStatus.style.color = "var(--danger)";
+            }
+
+            setTimeout(() => {
+                if (modalSaveStatus) modalSaveStatus.innerText = "";
+            }, 5000);
+        });
+    });
+}
+
+// Load Map from Modal (global function for onclick)
+window.loadMapFromModal = function (mapName) {
+    console.log('Loading map:', mapName);
+
+    var request = new ROSLIB.ServiceRequest({
+        filename: mapName,
+        match_type: 1  // 1 = START_AT_FIRST_NODE
+    });
+
+    // Show loading state
+    if (modalMapsList) {
+        const mapItems = modalMapsList.querySelectorAll('.map-item');
+        mapItems.forEach(item => {
+            if (item.textContent.includes(mapName)) {
+                const btn = item.querySelector('.btn-load-map');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                    btn.disabled = true;
+                }
+            }
+        });
+    }
+
+    loadMapClient.callService(request, function (result) {
+        console.log('Map loaded successfully:', result);
+        alert(`Map "${mapName}" loaded successfully! You can now switch to AUTO mode for navigation.`);
+        hideMapsModal();
+    }, function (error) {
+        console.error('Load error:', error);
+        alert(`Failed to load map "${mapName}". Make sure the map files exist in ~/.ros/ directory.`);
+        loadMapsToModal(); // Reload to reset buttons
+    });
+};
