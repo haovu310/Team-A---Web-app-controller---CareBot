@@ -547,6 +547,28 @@ var gridClient = null;
 var laserScanClient = null;
 var poseListener = null;
 
+// Helper function to fit map to viewer (Issue 4)
+function fitMapToViewer() {
+    if (!viewer || !gridClient || !gridClient.currentGrid) {
+        console.warn('Cannot fit map: viewer or grid not ready');
+        return;
+    }
+
+    const grid = gridClient.currentGrid;
+
+    // Scale to fit the map dimensions
+    viewer.scaleToDimensions(grid.width, grid.height);
+
+    // Center the map by shifting to its origin
+    viewer.shift(grid.pose.position.x, grid.pose.position.y);
+
+    console.log('Map fitted to viewer:', {
+        width: grid.width,
+        height: grid.height,
+        origin: grid.pose.position
+    });
+}
+
 function initMap() {
     // Create the viewer
     // We assume the map-canvas div is present
@@ -585,10 +607,10 @@ function initMap() {
             topic: '/map'
         });
 
-        // Scale the viewer to fit map when it loads
+        // Scale the viewer to fit map when it loads or updates
         gridClient.on('change', function () {
-            viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
-            viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+            // Issue 4: Auto-fit the map to the viewer
+            fitMapToViewer();
 
             // Hide placeholder when map loads
             const placeholder = document.getElementById('map-placeholder');
@@ -807,6 +829,7 @@ function loadMapsToModal() {
                             <span class="map-item-name">
                                 <i class="fas fa-map-marked-alt"></i>
                                 ${mapName}
+                                <span class="map-format-badge">.posegraph</span>
                             </span>
                             <div class="map-item-actions">
                                 <button class="btn-load-map" onclick="loadMapFromModal('${mapName}')">

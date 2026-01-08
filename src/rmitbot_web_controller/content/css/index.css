@@ -1076,6 +1076,18 @@ kbd {
     background: #fff5f7;
 }
 
+/* Map format badge (Issue 1) */
+.map-format-badge {
+    display: inline-block;
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-dark);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: 500;
+}
+
 
 /* Saved Maps Section */
 .saved-maps-section {
