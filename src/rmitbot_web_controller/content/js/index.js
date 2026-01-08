@@ -1,7 +1,27 @@
 // CareBot Controller Logic
 
+// Configuration - Get RPi host from URL parameter or use default
+function getRpiHostFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const rpiParam = urlParams.get('rpi_host');
+
+    if (rpiParam) {
+        console.log('Using RPi host from URL parameter:', rpiParam);
+        return rpiParam;
+    }
+
+    // Default: assume rosbridge and camera are on same host as web page
+    // This works when:
+    // 1. Running web_server on RPi (standalone mode)
+    // 2. Running web_server on PC with proper network routing
+    const defaultHost = window.location.hostname;
+    console.log('Using default RPi host:', defaultHost);
+    return defaultHost;
+}
+
 // ROS Connection - Connect to Pi's rosbridge
-var rosHost = window.location.hostname; // Dynamic host
+var rpiHost = getRpiHostFromUrl(); // RPi IP or hostname
+var rosHost = rpiHost; // For backward compatibility
 var ros = new ROSLIB.Ros({
     url: 'ws://' + rosHost + ':9090'
 });
@@ -671,6 +691,16 @@ function initMap() {
 // Since we can have multiple listeners, adding one here is cleaner.
 ros.on('connection', function () {
     setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
+});
+
+// Initialize camera stream URL on page load
+document.addEventListener('DOMContentLoaded', function () {
+    const streamingImg = document.getElementById('streaming');
+    if (streamingImg) {
+        const cameraUrl = 'http://' + rpiHost + ':8001/camera/stream';
+        streamingImg.src = cameraUrl;
+        console.log('Camera stream URL set to:', cameraUrl);
+    }
 });
 
 

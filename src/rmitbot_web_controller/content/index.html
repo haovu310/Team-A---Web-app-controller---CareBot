@@ -32,11 +32,11 @@
     </header>
 
     <main>
-        <!-- Left Column: Vision -->
         <section class="camera-card">
             <div class="stream-wrapper">
                 <!-- Camera stream from Pi camera_stream node -->
-                <img src="http://172.20.10.4:8001/camera/stream" id="streaming" alt="Waiting for Camera Signal..."
+                <!-- URL is set dynamically by JavaScript based on rpi_host parameter -->
+                <img src="" id="streaming" alt="Waiting for Camera Signal..."
                     onerror="this.alt='Camera Offline'">
                 <div class="camera-overlay">Live Feed</div>
             </div>

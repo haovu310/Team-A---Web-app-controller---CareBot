@@ -84,10 +84,16 @@
    ros2 launch rmitbot_bringup rmitbot.launch.py
    ```
 
-5. **Verify Topics (in new SSH terminal):**
+5. **Launch Web Services (rosbridge + camera stream):**
+   ```bash
+   ros2 launch rmitbot_web_controller web_rpi.launch.py
+   ```
+
+6. **Verify Topics (in new SSH terminal):**
    ```bash
    ros2 topic list
    # Should see: /cmd_vel, /odom, /scan, /camera/image_raw, etc.
+   ros2 node list | grep rosbridge  # Verify rosbridge is running
    ```
 
 ### Step 2: Launch on PC
@@ -126,16 +132,29 @@
    ros2 topic echo /scan --no-arr  # Should see lidar data from Pi
    ```
 
-4. **Launch Web Interface:**
+4. **Launch Web Server (PC only):**
    ```bash
-   ros2 launch rmitbot_web_controller web.launch.py
+   ros2 launch rmitbot_web_controller web_pc.launch.py
    ```
 
 5. **Open Browser:**
+   
+   If RPi IP is default (172.20.10.4):
    ```
-   http://localhost:8000
+   http://localhost:8000?rpi_host=172.20.10.4
    ```
-   The page will connect to Pi's rosbridge and camera stream automatically.
+   
+   If RPi IP is different:
+   ```
+   http://localhost:8000?rpi_host=<YOUR_RPI_IP>
+   ```
+   
+   The `rpi_host` parameter tells the web UI where to find rosbridge and the camera stream.
+   
+   **Note:** If you're running the web server on the RPi itself (standalone mode), you can omit the parameter:
+   ```
+   http://<RPI_IP>:8000
+   ```
 
 ---
 
@@ -244,11 +263,13 @@ All fixes have been committed separately:
 2. **Controller:** `src/rmitbot_controller/launch/controller.launch.py`
    - Topic remapped to `/cmd_vel`
 
-3. **Web Controller:** `src/rmitbot_web_controller/content/js/index.js`
-   - rosHost = '172.20.10.4'
+3. **Web Controller:** New split launch files
+   - `web_pc.launch.py` - For PC (web server only)
+   - `web_rpi.launch.py` - For RPi (rosbridge + camera stream)
 
-4. **Camera Stream:** `src/rmitbot_web_controller/content/index.html`
-   - Camera URL: `http://172.20.10.4:8001/camera/stream`
+4. **Dynamic Configuration:** `src/rmitbot_web_controller/content/js/index.js`
+   - Supports `rpi_host` URL parameter for flexible network setup
+   - Camera stream and rosbridge URLs configured dynamically
 
 5. **Localization:** `src/rmitbot_localization/config/ekf.yaml`
    - `base_link_frame: base_link`
