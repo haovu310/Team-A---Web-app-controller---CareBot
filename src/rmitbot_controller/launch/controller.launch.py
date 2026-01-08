@@ -77,22 +77,24 @@ def generate_launch_description():
             )
         )
     
-    imu_broadcaster = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=[
-            'imu_sensor_broadcaster',
-            '--param-file',
-            config_controller,
-        ],
-    )
+    # IMU Broadcaster - DISABLED (not using IMU yet)
+    # Uncomment when IMU sensor is ready to use
+    # imu_broadcaster = Node(
+    #     package="controller_manager",
+    #     executable="spawner",
+    #     arguments=[
+    #         'imu_sensor_broadcaster',
+    #         '--param-file',
+    #         config_controller,
+    #     ],
+    # )
     
-    imu_broadcaster_delayed = RegisterEventHandler(
-        event_handler=OnProcessExit(
-            target_action=controller_spawner,
-            on_exit=[imu_broadcaster],
-            )
-        )
+    # imu_broadcaster_delayed = RegisterEventHandler(
+    #     event_handler=OnProcessExit(
+    #         target_action=controller_spawner,
+    #         on_exit=[imu_broadcaster],
+    #         )
+    #     )
 
     return LaunchDescription(
         [
@@ -101,6 +103,6 @@ def generate_launch_description():
             controller_manager, 
             joint_state_broadcaster_spawner,
             controller_spawner_delayed,
-            imu_broadcaster_delayed, 
+            # imu_broadcaster_delayed,  # DISABLED - uncomment when IMU is ready
         ]
     )
