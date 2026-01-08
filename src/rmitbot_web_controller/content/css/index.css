@@ -1027,6 +1027,55 @@ kbd {
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
+/* AUTO Mode Map Section */
+.auto-map-section {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 15px 0;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+}
+
+.auto-map-section h3 {
+    margin: 0 0 8px 0;
+    color: white;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.auto-map-section .help-text {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 12px;
+}
+
+.btn-manage-maps-auto {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    color: #f5576c;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-manage-maps-auto:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    background: #fff5f7;
+}
+
 
 /* Saved Maps Section */
 .saved-maps-section {

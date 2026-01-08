@@ -133,13 +133,13 @@
                     </div>
                 </div>
 
-                <div class="waypoints-section" id="waypoints-section" style="display: none;">
-                    <h3>Demo Locations</h3>
-                    <div class="waypoint-buttons">
-                        <button class="btn-waypoint" data-x="1.0" data-y="0.0" data-yaw="0">Pt A</button>
-                        <button class="btn-waypoint" data-x="2.0" data-y="0.0" data-yaw="0">Pt B</button>
-                        <button class="btn-waypoint" data-x="0.0" data-y="0.0" data-yaw="0">Home</button>
-                    </div>
+                <!-- Map Management in AUTO Mode -->
+                <div class="auto-map-section" id="auto-map-section" style="display: none;">
+                    <h3><i class="fas fa-map"></i> Map Management</h3>
+                    <p class="help-text">Load a saved map to enable navigation</p>
+                    <button class="btn-manage-maps-auto" id="btn-manage-maps-auto">
+                        <i class="fas fa-folder-open"></i> Browse Maps
+                    </button>
                 </div>
 
                 <div class="nav-status" id="nav-status" style="display: none;">
@@ -250,7 +250,7 @@
         CareBot System v1.0 | Hospital Unit A | Shortcuts: WASD = Move, Space = E-Stop
     </footer>
 
-    <script src="js/index.js?v=9"></script>
+    <script src="js/index.js?v=10"></script>
 </body>
 
 </html>

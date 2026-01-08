@@ -343,7 +343,7 @@ function setMode(mode) {
 
     // Show/hide relevant sections
     if (mode === 'AUTO') {
-        document.getElementById('waypoints-section').style.display = 'block';
+        document.getElementById('auto-map-section').style.display = 'block';
         document.getElementById('custom-goal-section').style.display = 'block';
         document.getElementById('nav-status').style.display = 'block';
         document.getElementById('user-manual-section').style.display = 'none';
@@ -351,9 +351,10 @@ function setMode(mode) {
         // Hide manual movement controls in Auto
         document.querySelector('.movement-section').style.display = 'none';
         document.querySelector('.speed-section').style.display = 'none';
+        document.getElementById('save-map-section').style.display = 'none';
 
     } else if (mode === 'MANUAL') {
-        document.getElementById('waypoints-section').style.display = 'none';
+        document.getElementById('auto-map-section').style.display = 'none';
         document.getElementById('custom-goal-section').style.display = 'none';
         document.getElementById('nav-status').style.display = 'none';
         document.getElementById('user-manual-section').style.display = 'none';
@@ -372,7 +373,7 @@ function setMode(mode) {
 
     } else {
         // IDLE: Show manual only
-        document.getElementById('waypoints-section').style.display = 'none';
+        document.getElementById('auto-map-section').style.display = 'none';
         document.getElementById('custom-goal-section').style.display = 'none';
         document.getElementById('nav-status').style.display = 'none';
         document.getElementById('user-manual-section').style.display = 'block';
@@ -768,6 +769,13 @@ if (modalClose) {
     console.error('modal-close element not found!');
 }
 
+// AUTO mode map button
+const btnManageMapsAuto = document.getElementById('btn-manage-maps-auto');
+if (btnManageMapsAuto) {
+    btnManageMapsAuto.addEventListener('click', showMapsModal);
+    console.log('AUTO mode Manage Maps button event listener attached');
+}
+
 // Close modal when clicking outside
 if (mapsModal) {
     mapsModal.addEventListener('click', function (e) {
@@ -902,6 +910,12 @@ if (btnModalSaveMap) {
 window.loadMapFromModal = function (mapName) {
     console.log('Loading map:', mapName);
 
+    // Issue 2: Prevent loading in MANUAL mode (would overlay current map)
+    if (currentMode === 'MANUAL') {
+        alert('Cannot load map while in MANUAL mode!\n\nSwitch to IDLE or AUTO mode first to avoid map overlay.');
+        return;
+    }
+
     var request = new ROSLIB.ServiceRequest({
         filename: mapName,
         match_type: 1  // 1 = START_AT_FIRST_NODE
@@ -927,7 +941,7 @@ window.loadMapFromModal = function (mapName) {
         hideMapsModal();
     }, function (error) {
         console.error('Load error:', error);
-        alert(`Failed to load map "${mapName}". Make sure the map files exist in ~/.ros/ directory.`);
+        alert(`Failed to load map "${mapName}". Make sure the map files exist in the workspace directory.`);
         loadMapsToModal(); // Reload to reset buttons
     });
 };
