@@ -675,10 +675,11 @@ ros.on('connection', function () {
 
 
 // === MAPPING TOOLS ===
+// Use serialize_map (NOT save_map) to create .posegraph files
 var saveMapClient = new ROSLIB.Service({
     ros: ros,
-    name: '/slam_toolbox/save_map',
-    serviceType: 'slam_toolbox/srv/SaveMap'
+    name: '/slam_toolbox/serialize_map',
+    serviceType: 'slam_toolbox/srv/SerializePoseGraph'
 });
 
 // Save map from MANUAL mode
@@ -694,8 +695,9 @@ if (btnSaveManualMap) {
             return;
         }
 
+        // SerializePoseGraph uses 'filename' not 'name'
         var request = new ROSLIB.ServiceRequest({
-            name: { data: name }
+            filename: name
         });
 
         if (manualSaveStatus) {
@@ -706,7 +708,7 @@ if (btnSaveManualMap) {
         saveMapClient.callService(request, function (result) {
             console.log('Map saved:', result);
             if (manualSaveStatus) {
-                manualSaveStatus.innerText = `Map "${name}" saved successfully in ~/.ros/!`;
+                manualSaveStatus.innerText = `Map "${name}" saved successfully as ${name}.posegraph!`;
                 manualSaveStatus.style.color = "var(--success)";
             }
             if (manualMapName) manualMapName.value = '';
@@ -893,8 +895,9 @@ if (btnModalSaveMap) {
             return;
         }
 
+        // SerializePoseGraph uses 'filename' not 'name'
         var request = new ROSLIB.ServiceRequest({
-            name: { data: name }
+            filename: name
         });
 
         if (modalSaveStatus) {
@@ -905,7 +908,7 @@ if (btnModalSaveMap) {
         saveMapClient.callService(request, function (result) {
             console.log('Map saved:', result);
             if (modalSaveStatus) {
-                modalSaveStatus.innerText = "Map saved successfully!";
+                modalSaveStatus.innerText = `Map "${name}" saved successfully as ${name}.posegraph!`;
                 modalSaveStatus.style.color = "var(--success)";
             }
             if (modalMapName) modalMapName.value = '';
