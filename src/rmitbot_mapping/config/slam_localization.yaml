@@ -16,7 +16,7 @@ slam_toolbox:
     scan_topic: /scan
     use_map_saver: true
     mode: localization  # Changed from 'mapping' to 'localization'
-    use_sim_time: true
+    use_sim_time: false  # CHANGED: false for real robot, true for simulation
 
     # Map file to load (must match the saved map name WITHOUT extension)
     # This tells SLAM which map to load when starting in localization mode  
