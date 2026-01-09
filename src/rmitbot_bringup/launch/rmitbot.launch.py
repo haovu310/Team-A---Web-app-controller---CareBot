@@ -99,17 +99,17 @@ def generate_launch_description():
         enable_vision_arg,
         
         # --- ROBOT SECTION (Uncomment for Pi) ---
-        # controller,
-        # rplidar,
-        # localization,
-        # vision,
-        # twistmux,     
+        controller,
+        rplidar,
+        localization,
+        vision,
+        twistmux,     
 
         # --- PC SECTION (Uncomment for Workstation) ---
         web_controller,
-        display,
-        # mapping,            # Enable for SLAM
-        # navigation_delayed, # Enable for Nav2
+        # display,            # Run on PC/VNC if needed
+        mapping,            # Enable for SLAM
+        navigation_delayed, # Enable for Nav2
         
         # Note: 'vision' can also run on PC if testing with USB webcam
         # vision, 

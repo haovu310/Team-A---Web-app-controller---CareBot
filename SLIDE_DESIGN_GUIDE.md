@@ -1,3 +1,22 @@
+## Slide: Supporting the UN Sustainable Development Goals (SDGs)
+
+### Our Project & the SDGs
+Our robotics project contributes to the UN SDGs by leveraging automation and smart technology for positive social impact.
+
+### Relevant SDGs Addressed
+- **Goal 3: Good Health and Well-being**  
+  Enables safer environments and supports healthcare or assistance tasks.
+- **Goal 9: Industry, Innovation, and Infrastructure**  
+  Promotes innovation in robotics and digital infrastructure.
+- **Goal 11: Sustainable Cities and Communities**  
+  Supports smart, safe, and accessible urban environments.
+
+### How We Contribute
+- Using robotics for safer, more efficient operations.
+- Reducing human risk in hazardous environments.
+- Enabling data-driven decision making for sustainability.
+
+*Visuals: Add SDG icons for the relevant goals and a diagram or image of your robot in action.*
 # PowerPoint Slide Design Guide
 ## Work Package 4: Autonomous Implementation with ROS2
 ### Professional Design Guidelines for Maximum Impact
@@ -211,7 +230,7 @@
 ┌────────────────────────────────────────┐
 │   D4.1: LiDAR Implementation           │
 │                                        │
-│  ┌─────────────┐   Technical Specs    │
+│  ┌─────────────┐  Technical Specs    │
 │  │   [Photo    │   • 360° scanning    │
 │  │  RPLidar    │   • 10 Hz rate       │
 │  │   A1M8]     │   • 0.15-12m range   │
