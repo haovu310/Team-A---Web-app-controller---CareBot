@@ -32,8 +32,13 @@ def generate_launch_description():
     )
 
     # Launch Web Controller (Rosbridge + Web Server)
+    # Launch Web Controller (Rosbridge + Web Server)
     web_controller = IncludeLaunchDescription(
         os.path.join(pkg_path_web, "launch", "web.launch.py"),
+        launch_arguments={
+            'camera_topic': 'camera/image_raw',
+            'use_compressed': 'False'
+        }.items()
     )
     
     # Launch Twist Mux (routes cmd_vel_keyboard -> cmd_vel)

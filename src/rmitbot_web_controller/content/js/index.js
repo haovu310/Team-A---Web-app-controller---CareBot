@@ -6,6 +6,13 @@ var ros = new ROSLIB.Ros({
     url: 'ws://' + rosHost + ':9090'
 });
 
+// Set Camera Stream URL dynamically
+var streamImg = document.getElementById('streaming');
+if (streamImg) {
+    streamImg.src = 'http://' + rosHost + ':8001/camera/stream';
+    console.log('Camera stream set to: ' + streamImg.src);
+}
+
 // UI Elements
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('connection-text');
