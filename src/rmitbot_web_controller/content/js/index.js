@@ -848,8 +848,10 @@ function loadMapsToModal() {
 
     modalMapsList.innerHTML = '<p class="loading-message">Loading maps...</p>';
 
-    // Fetch from web server endpoint
-    fetch('http://' + rosHost + ':8000/list_maps')
+    // Fetch from web server endpoint - always use the current web server (PC), not RPI
+    // Maps are stored on PC, and only PC has the /list_maps endpoint
+    const webServerHost = window.location.hostname;
+    fetch('http://' + webServerHost + ':8000/list_maps')
         .then(response => response.json())
         .then(data => {
             console.log('Maps loaded:', data);
@@ -995,6 +997,12 @@ window.loadMapFromModal = function (mapName) {
         console.log('Map loaded successfully:', result);
         alert(`Map "${mapName}" loaded successfully! You can now switch to AUTO mode for navigation.`);
         hideMapsModal();
+
+        // Wait for the /map topic to start publishing the loaded map, then re-fit the viewer
+        setTimeout(function () {
+            console.log('Re-fitting map viewer after load...');
+            fitMapToViewer();
+        }, 2000); // 2 second delay
     }, function (error) {
         console.error('Load error:', error);
         alert(`Failed to load map "${mapName}". Make sure the map files exist in the workspace directory.`);

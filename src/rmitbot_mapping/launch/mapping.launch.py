@@ -4,6 +4,7 @@ from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from pathlib import Path
 
 # ros2 launch rmitbot_mapping slam.launch.py use_sim_time:=true
 # ros2 launch rmitbot_mapping slam.launch.py use_sim_time:=false
@@ -11,6 +12,10 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 # ros2 launch slam_toolbox online_async_launch.py params_file:=./scr/rmitbot_mapping/config/slam.yaml use_sim_time:=true
 
 def generate_launch_description():
+    
+    # Create maps directory if it doesn't exist
+    maps_dir = Path.home() / 'Team-A---Web-app-controller---CareBot' / 'maps'
+    maps_dir.mkdir(parents=True, exist_ok=True)
     
     use_sim_time = LaunchConfiguration('use_sim_time')
     

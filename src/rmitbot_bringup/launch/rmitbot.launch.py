@@ -18,6 +18,7 @@ def generate_launch_description():
     pkg_path_mapping = get_package_share_directory("rmitbot_mapping")
     pkg_path_navigation = get_package_share_directory("rmitbot_navigation")
     pkg_path_vision = get_package_share_directory("rmitbot_vision")
+    pkg_path_web = get_package_share_directory("rmitbot_web_controller")
     
     # Declare launch argument for enabling vision
     enable_vision_arg = DeclareLaunchArgument(
@@ -64,17 +65,22 @@ def generate_launch_description():
     #   Run this section on the PC. Comment out SECTION 1 when running on the PC.
     # ==================================================================================================
     
-    # 2.1: Visualization (RViz)
+    # 2.1: Web Controller (Rosbridge + Web Server)
+    web_controller = IncludeLaunchDescription(
+        os.path.join(pkg_path_web, "launch", "web.launch.py"),
+    )
+    
+    # 2.2: Visualization (RViz)
     display = IncludeLaunchDescription(
         os.path.join(pkg_path_description,"launch","display.launch.py"),
     )
     
-    # 2.2: Mapping (SLAM Toolbox)
+    # 2.3: Mapping (SLAM Toolbox)
     mapping = IncludeLaunchDescription(
         os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
     )
     
-    # 2.3: Navigation (Nav2)
+    # 2.4: Navigation (Nav2)
     navigation = IncludeLaunchDescription(
         os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
     )
@@ -100,9 +106,10 @@ def generate_launch_description():
         # twistmux,     
 
         # --- PC SECTION (Uncomment for Workstation) ---
+        web_controller,
         display,
-        mapping,            # Enable for SLAM
-        navigation_delayed, # Enable for Nav2
+        # mapping,            # Enable for SLAM
+        # navigation_delayed, # Enable for Nav2
         
         # Note: 'vision' can also run on PC if testing with USB webcam
         # vision, 

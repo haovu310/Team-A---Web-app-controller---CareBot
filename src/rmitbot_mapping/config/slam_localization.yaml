@@ -19,8 +19,8 @@ slam_toolbox:
     use_sim_time: true
 
     # Map file to load (must match the saved map name WITHOUT extension)
-    # Uncomment and set this when you want to load a specific map on startup
-    # map_file_name: my_map
+    # This tells SLAM which map to load when starting in localization mode  
+    map_file_name: corner
     # map_start_pose: [0.0, 0.0, 0.0]
 
     scan_queue_size: 100
