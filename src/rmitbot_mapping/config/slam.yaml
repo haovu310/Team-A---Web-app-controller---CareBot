@@ -23,13 +23,14 @@ slam_toolbox:
     # or at the dock, but they are mutually exclusive, if pose is given
     # will use pose
     # Default save directory for maps (will be created by launch file)
-    map_file_name: /home/aesitof/Team-A---Web-app-controller---CareBot/maps/default
+    map_file_name: /home/hao/Documents/App Control/team_A_web_app/src/rmitbot_mapping/maps/default
+    # Anh's path: /home/aesitof/Team-A---Web-app-controller---CareBot/maps/default
     # map_start_pose: [0.0, 0.0, 0.0]
     #map_start_at_dock: true
 
-    scan_queue_size: 100 // from chatgtp
-    transform_tolerance: 0.3 // from chatgtp
-    transform_timeout: 0.5 // from chatgtp
+    scan_queue_size: 100 # 
+    transform_tolerance: 0.3 # 
+    transform_timeout: 0.5 #  
 
     debug_logging: false
     throttle_scans: 1

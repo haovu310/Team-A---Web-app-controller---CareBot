@@ -1,4 +1,4 @@
-// CareBot Controller Logic
+// CareBot Controller Logic - OPTIMIZED FOR RASPBERRY PI
 
 // Configuration - Get RPi host from URL parameter or use default
 function getRpiHostFromUrl() {
@@ -19,12 +19,75 @@ function getRpiHostFromUrl() {
     return defaultHost;
 }
 
-// ROS Connection - Connect to Pi's rosbridge
+// ROS Connection - Connect to Pi's rosbridge with retry logic
 var rpiHost = getRpiHostFromUrl(); // RPi IP or hostname
 var rosHost = rpiHost; // For backward compatibility
-var ros = new ROSLIB.Ros({
-    url: 'ws://' + rosHost + ':9090'
-});
+
+// Connection retry configuration
+var connectionRetryCount = 0;
+var maxRetries = 10;
+var retryDelay = 2000; // Start with 2 seconds
+var maxRetryDelay = 30000; // Max 30 seconds
+
+function createRosConnection() {
+    var ros = new ROSLIB.Ros({
+        url: 'ws://' + rosHost + ':9090'
+    });
+
+    // Connection timeout handling
+    var connectionTimeout = setTimeout(function() {
+        console.warn('Connection timeout - closing and retrying...');
+        ros.close();
+    }, 10000); // 10 second timeout
+
+    ros.on('connection', function () {
+        clearTimeout(connectionTimeout);
+        console.log('Connected to websocket server.');
+        statusDot.className = 'status-dot connected';
+        statusText.innerText = 'Online';
+        connectionRetryCount = 0;
+        retryDelay = 2000; // Reset retry delay
+    });
+
+    ros.on('error', function (error) {
+        clearTimeout(connectionTimeout);
+        console.log('Error connecting: ', error);
+        statusDot.className = 'status-dot disconnected';
+        statusText.innerText = 'Error';
+        attemptReconnection();
+    });
+
+    ros.on('close', function () {
+        clearTimeout(connectionTimeout);
+        console.log('Connection closed.');
+        statusDot.className = 'status-dot disconnected';
+        statusText.innerText = 'Offline';
+        attemptReconnection();
+    });
+
+    return ros;
+}
+
+function attemptReconnection() {
+    if (connectionRetryCount < maxRetries) {
+        connectionRetryCount++;
+        console.log(`Attempting reconnection ${connectionRetryCount}/${maxRetries} in ${retryDelay/1000}s...`);
+
+        setTimeout(function() {
+            console.log('Reconnecting...');
+            ros = createRosConnection();
+            initializeRosTopics();
+        }, retryDelay);
+
+        // Exponential backoff
+        retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
+    } else {
+        console.error('Max reconnection attempts reached. Please refresh the page.');
+        statusText.innerText = 'Disconnected';
+    }
+}
+
+var ros = createRosConnection();
 
 // UI Elements
 const statusDot = document.getElementById('status-dot');
@@ -32,31 +95,39 @@ const statusText = document.getElementById('connection-text');
 const speedSlider = document.getElementById('speed-slider');
 const speedDisplay = document.getElementById('speed-display');
 
-// Connection Handlers
-ros.on('connection', function () {
-    console.log('Connected to websocket server.');
-    statusDot.className = 'status-dot connected';
-    statusText.innerText = 'Online';
-});
+// Initialize ROS topics (called after connection established)
+function initializeRosTopics() {
+    // Reinitialize all topics when reconnecting
+    cmdVel = new ROSLIB.Topic({
+        ros: ros,
+        name: 'cmd_vel_keyboard',
+        messageType: 'geometry_msgs/TwistStamped'
+    });
 
-ros.on('error', function (error) {
-    console.log('Error connecting: ', error);
-    statusDot.className = 'status-dot disconnected';
-    statusText.innerText = 'Error';
-});
+    goalTopic = new ROSLIB.Topic({
+        ros: ros,
+        name: '/goal_pose',
+        messageType: 'geometry_msgs/PoseStamped'
+    });
 
-ros.on('close', function () {
-    console.log('Connection closed.');
-    statusDot.className = 'status-dot disconnected';
-    statusText.innerText = 'Offline';
-});
+    saveMapClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/serialize_map',
+        serviceType: 'slam_toolbox/srv/SerializePoseGraph'
+    });
 
-// 2. Publisher Setup
-var cmdVel = new ROSLIB.Topic({
-    ros: ros,
-    name: 'cmd_vel_keyboard',
-    messageType: 'geometry_msgs/TwistStamped'
-});
+    loadMapClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/deserialize_map',
+        serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
+    });
+}
+
+// 2. Publisher Setup (will be initialized after connection)
+var cmdVel = null;
+var goalTopic = null;
+var saveMapClient = null;
+var loadMapClient = null;
 
 // State
 var maxLinearSpeed = 1.0; // Max speed at 100% slider
@@ -71,8 +142,13 @@ speedSlider.addEventListener('input', function (e) {
     speedDisplay.innerText = currentLinearScale.toFixed(2);
 });
 
-// 4. Movement Logic
+// 4. Movement Logic - Optimized with safety check
 function publishTwist(lx, ly, az) {
+    if (!cmdVel || !ros || !ros.isConnected) {
+        console.warn('Cannot publish: ROS not connected');
+        return;
+    }
+
     // timestamp could be 0, or current time
     var twist = new ROSLIB.Message({
         header: {
@@ -93,15 +169,14 @@ function publishTwist(lx, ly, az) {
         }
     });
     cmdVel.publish(twist);
-    console.log("Cmd:", lx, ly, az);
 }
 
 function stop() {
     publishTwist(0, 0, 0);
 }
 
-// 5. Button Bindings
-var PUBLISH_RATE_MS = 100; // Send command every 100ms while held
+// 5. Button Bindings - Optimized publish rate for RPi
+var PUBLISH_RATE_MS = 150; // Reduced from 100ms to 150ms to lower CPU load
 
 function bindBtn(id, lx, ly, az) {
     const btn = document.getElementById(id);
@@ -225,12 +300,8 @@ var currentMode = 'IDLE'; // 'IDLE', 'MANUAL', 'AUTO'
 var currentLoadedMap = null; // Track currently loaded map name
 var savedMaps = []; // List of saved maps
 
-// Nav2 Navigation - Use topic-based approach for ROS2 compatibility
-var goalTopic = new ROSLIB.Topic({
-    ros: ros,
-    name: '/goal_pose',
-    messageType: 'geometry_msgs/PoseStamped'
-});
+// Nav2 Navigation - Use topic-based approach for ROS2 compatibility (initialized later)
+// var goalTopic will be created in initializeRosTopics()
 
 // Current navigation goal handle
 var currentGoalId = null;
@@ -414,6 +485,11 @@ function setMode(mode) {
 function sendNavGoal(x, y, yaw) {
     if (currentMode !== 'AUTO') {
         alert('Please switch to AUTO mode to navigate.');
+        return;
+    }
+
+    if (!goalTopic || !ros || !ros.isConnected) {
+        alert('ROS connection not available. Please wait for connection.');
         return;
     }
 
@@ -685,32 +761,44 @@ function initMap() {
     }
 }
 
-// Hook into connection
-// We already have ros.on('connection', ...) at the top. 
-// We can add another listener or modify the existing one. 
-// Since we can have multiple listeners, adding one here is cleaner.
+// Hook into connection - reinitialize topics and map on connection
 ros.on('connection', function () {
+    initializeRosTopics();
     setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
 });
 
-// Initialize camera stream URL on page load
+// Initialize camera stream URL on page load with error handling
 document.addEventListener('DOMContentLoaded', function () {
     const streamingImg = document.getElementById('streaming');
     if (streamingImg) {
         const cameraUrl = 'http://' + rpiHost + ':8001/camera/stream';
         streamingImg.src = cameraUrl;
         console.log('Camera stream URL set to:', cameraUrl);
+
+        // Add error handler for camera stream
+        streamingImg.onerror = function() {
+            console.error('Camera stream failed to load. Retrying in 5s...');
+            setTimeout(function() {
+                streamingImg.src = cameraUrl + '?t=' + Date.now(); // Cache bust
+            }, 5000);
+        };
+
+        // Add load handler
+        streamingImg.onload = function() {
+            console.log('Camera stream connected successfully');
+        };
     }
+
+    // Initialize ROS topics on page load
+    initializeRosTopics();
 });
 
 
 // === MAPPING TOOLS ===
 // Use serialize_map (NOT save_map) to create .posegraph files
-var saveMapClient = new ROSLIB.Service({
-    ros: ros,
-    name: '/slam_toolbox/serialize_map',
-    serviceType: 'slam_toolbox/srv/SerializePoseGraph'
-});
+// Will be initialized in initializeRosTopics()
+// var saveMapClient
+// var loadMapClient
 
 // Save map from MANUAL mode
 const btnSaveManualMap = document.getElementById('btn-save-manual-map');
@@ -760,14 +848,8 @@ if (btnSaveManualMap) {
     });
 }
 
-// Old save map button removed - now handled in modal
-
-// Load Map Service Client
-var loadMapClient = new ROSLIB.Service({
-    ros: ros,
-    name: '/slam_toolbox/deserialize_map',
-    serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
-});
+// Load Map Service Client (will be initialized in initializeRosTopics())
+// var loadMapClient
 
 // Old refresh buttons removed - maps load automatically in modal
 
