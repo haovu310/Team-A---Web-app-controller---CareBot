@@ -232,8 +232,8 @@ bindBtn('diag_back_left', -1, 1, 0);  // Backward-Left
 bindBtn('diag_back_right', -1, -1, 0); // Backward-Right
 
 // Rotate (Spin)
-bindBtn('rotateL', 0, 0, 1);
-bindBtn('rotateR', 0, 0, -1);
+bindBtn('spin_left', 0, 0, 1);
+bindBtn('spin_right', 0, 0, -1);
 
 // Stop Button (Action on click)
 const stopBtn = document.getElementById('stop');
@@ -492,10 +492,11 @@ function setMode(mode) {
         document.querySelector('.speed-section').style.display = 'none';
         document.getElementById('save-map-section').style.display = 'none';
 
-        // Clear the map visualization if no map is loaded
-        if (!isMapLoadedForNav) {
-            clearMapVisualization();
-        }
+        // Don't clear the map - it might be loading or already loaded
+        // The gridClient will handle map updates from the /map topic
+        // if (!isMapLoadedForNav) {
+        //     clearMapVisualization();
+        // }
 
     } else if (mode === 'MANUAL') {
         document.getElementById('auto-map-section').style.display = 'none';
@@ -1203,6 +1204,12 @@ window.loadMapFromModal = function (mapName) {
         isMapLoadedForNav = true;
         currentLoadedMap = mapName;
 
+        // Hide placeholder immediately
+        const placeholder = document.getElementById('map-placeholder');
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
         // Switch to AUTO mode if not already there
         if (currentMode !== 'AUTO') {
             setMode('AUTO');
@@ -1212,10 +1219,21 @@ window.loadMapFromModal = function (mapName) {
         hideMapsModal();
 
         // Wait for the /map topic to start publishing the loaded map, then re-fit the viewer
+        // Multiple attempts to handle delayed map publishing
         setTimeout(function () {
-            console.log('Re-fitting map viewer after load...');
+            console.log('Re-fitting map viewer after load (attempt 1)...');
             fitMapToViewer();
-        }, 2000); // 2 second delay
+        }, 1000); // 1 second
+
+        setTimeout(function () {
+            console.log('Re-fitting map viewer after load (attempt 2)...');
+            fitMapToViewer();
+        }, 3000); // 3 seconds
+
+        setTimeout(function () {
+            console.log('Re-fitting map viewer after load (final attempt)...');
+            fitMapToViewer();
+        }, 5000); // 5 seconds
     }, function (error) {
         console.error('Load error:', error);
         alert(`Failed to load map "${mapName}". Make sure the map files exist in the workspace directory.`);
