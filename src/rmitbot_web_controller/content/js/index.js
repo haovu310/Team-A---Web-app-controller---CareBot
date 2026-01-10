@@ -697,6 +697,9 @@ async function setMode(mode) {
         isMappingActive = false;
         hasUnsavedMapChanges = false;
         isMapLoadedForNav = false;
+
+        // Ensure map is cleared in IDLE mode (startup state)
+        clearMapVisualization();
     }
 
     // Cancel any ongoing navigation when leaving AUTO mode
@@ -988,6 +991,11 @@ function initMap() {
     }
 
     // Setup the map client
+    // Issue 5: Don't initialize map client in IDLE mode (keep blank)
+    if (currentMode === 'IDLE') {
+        return;
+    }
+
     if (!gridClient) {
         gridClient = new ROS2D.OccupancyGridClient({
             ros: ros,
