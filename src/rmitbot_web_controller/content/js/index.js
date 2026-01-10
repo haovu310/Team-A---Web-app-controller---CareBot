@@ -634,11 +634,11 @@ async function setMode(mode) {
         document.querySelector('.speed-section').style.display = 'none';
         document.getElementById('save-map-section').style.display = 'none';
 
-        // Don't clear the map - it might be loading or already loaded
+        // Clear the map - it might be loading or already loaded
         // The gridClient will handle map updates from the /map topic
-        // if (!isMapLoadedForNav) {
-        //     clearMapVisualization();
-        // }
+        if (!isMapLoadedForNav) {
+            clearMapVisualization();
+        }
 
     } else if (mode === 'MANUAL') {
         document.getElementById('auto-map-section').style.display = 'none';
@@ -1402,6 +1402,9 @@ window.loadMapFromModal = async function (mapName) {
         // Set flag indicating map is loaded for navigation
         isMapLoadedForNav = true;
         currentLoadedMap = mapName;
+
+        // Re-initialize map to create fresh grid client since we cleared it
+        initMap();
 
         // Hide placeholder immediately
         const placeholder = document.getElementById('map-placeholder');
