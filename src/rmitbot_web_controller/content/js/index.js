@@ -667,6 +667,9 @@ async function setMode(mode) {
         console.log('Entering MANUAL mode: Clearing map visualization for SLAM');
         clearMapVisualization();
 
+        // Re-initialize map to create fresh SLAM grid client
+        setTimeout(initMap, 100);
+
     } else {
         // IDLE: Show manual only
         document.getElementById('auto-map-section').style.display = 'none';
@@ -882,6 +885,10 @@ function clearMapVisualization() {
     if (viewer && viewer.scene) {
         viewer.scene.removeAllChildren();
     }
+
+    // Reset clients so they can be re-initialized
+    gridClient = null;
+    poseListener = null;
 
     console.log('Map visualization cleared');
 }
