@@ -1336,7 +1336,7 @@ window.loadMapFromModal = async function (mapName) {
             setMode('AUTO');
         }
 
-        showDialog(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`);
+        showDialog(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`, 'Map Loaded');
         hideMapsModal();
 
         // Wait for the /map topic to start publishing the loaded map, then re-fit the viewer
