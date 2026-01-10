@@ -764,7 +764,7 @@ function toggleSlamMapping(shouldPause) {
     var pauseClient = new ROSLIB.Service({
         ros: ros,
         name: '/slam_toolbox/pause_new_measurements',
-        serviceType: 'slam_toolbox/Pause'
+        serviceType: 'slam_toolbox/srv/Pause'
     });
 
     var request = new ROSLIB.ServiceRequest({
