@@ -668,7 +668,18 @@ async function setMode(mode) {
         clearMapVisualization();
 
         // Re-initialize map to create fresh SLAM grid client
-        setTimeout(initMap, 100);
+        // Increase delay to 500ms to ensure backend node switch is clean and topics are ready
+        setTimeout(initMap, 500);
+
+        // Show instruction dialog
+        setTimeout(() => {
+            showDialog(
+                '🗺️ SLAM Mapping Active\n\n' +
+                'The current environment is being scanned.\n\n' +
+                'Please drive the robot around to expand the map!',
+                'Mapping Started'
+            );
+        }, 800);
 
     } else {
         // IDLE: Show manual only
@@ -786,7 +797,7 @@ function cancelNavigation() {
             });
 
             // Assuming you have a goalTopic defined elsewhere to publish the stopMessage
-            // goalTopic.publish(stopMessage); 
+            // goalTopic.publish(stopMessage);
 
             console.log('Cancelling navigation via fallback');
             currentGoalId = null;
@@ -886,16 +897,39 @@ function clearMapVisualization() {
         viewer.scene.removeAllChildren();
     }
 
-    // Reset clients so they can be re-initialized
-    gridClient = null;
-    poseListener = null;
+    // Properly unsubscribe listeners to prevent "zombie" connections
+    if (poseListener) {
+        try {
+            poseListener.unsubscribe();
+            console.log('Unsubscribed from pose listener');
+        } catch (e) {
+            console.warn('Error unsubscribing pose listener:', e);
+        }
+        poseListener = null;
+    }
 
-    console.log('Map visualization cleared');
+    if (gridClient) {
+        // Try to unsubscribe internal topic if exposed
+        // Note: Different versions of ros2djs expose the topic differently
+        // commonly 'rosTopic' or just via garbage collection if we are lucky,
+        // but explicit unsubscribe is safer if possible.
+        if (gridClient.rosTopic) {
+            try {
+                gridClient.rosTopic.unsubscribe();
+                console.log('Unsubscribed from grid client topic');
+            } catch (e) {
+                console.warn('Error unsubscribing grid client:', e);
+            }
+        }
+        gridClient = null;
+    }
+
+    console.log('Map visualization cleared and listeners reset');
 }
 
 // Helper function to fit map to viewer (Issue 4)
 function fitMapToViewer() {
-    if (!viewer || !gridClient || !gridClient.currentGrid) {
+    if (!viewer || !gridClient || !gridClient.currentGrid || !gridClient.currentGrid.pose) {
         console.warn('Cannot fit map: viewer or grid not ready');
         return;
     }
@@ -906,13 +940,22 @@ function fitMapToViewer() {
     viewer.scaleToDimensions(grid.width, grid.height);
 
     // Center the map by shifting to its origin
-    viewer.shift(grid.pose.position.x, grid.pose.position.y);
+    // Check if pose and position exist before accessing
+    if (grid.pose && grid.pose.position) {
+        viewer.shift(grid.pose.position.x, grid.pose.position.y);
 
-    console.log('Map fitted to viewer:', {
-        width: grid.width,
-        height: grid.height,
-        origin: grid.pose.position
-    });
+        console.log('Map fitted to viewer:', {
+            width: grid.width,
+            height: grid.height,
+            origin: grid.pose.position
+        });
+    } else {
+        // Fallback or just scale
+        console.log('Map scaled to dimensions (no pose data available yet):', {
+            width: grid.width,
+            height: grid.height
+        });
+    }
 }
 
 function initMap() {
@@ -955,6 +998,8 @@ function initMap() {
 
         // Scale the viewer to fit map when it loads or updates
         gridClient.on('change', function () {
+            console.log('Map update received!'); // Debug log
+
             // Issue 4: Auto-fit the map to the viewer
             fitMapToViewer();
 
