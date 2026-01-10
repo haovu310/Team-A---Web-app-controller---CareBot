@@ -205,7 +205,8 @@ input[type=range] {
     grid-template-areas:
         "dfl fwd dfr"
         "left stop right"
-        "dbl back dbr";
+        "dbl back dbr"
+        "spinl . spinr";
     gap: 10px;
     justify-content: center;
     margin: 1rem 0;
@@ -269,6 +270,14 @@ input[type=range] {
 
 #right {
     grid-area: right;
+}
+
+#spin_left {
+    grid-area: spinl;
+}
+
+#spin_right {
+    grid-area: spinr;
 }
 
 /* Stop Button */

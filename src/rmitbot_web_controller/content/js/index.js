@@ -279,15 +279,22 @@ function initializeRosTopics() {
         name: '/slam_toolbox/deserialize_map',
         serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
     });
+
+    // Initialize Cancel Service
+    cancelGoalService = new ROSLIB.Service({
+        ros: ros,
+        name: '/navigate_to_pose/_action/cancel_goal',
+        serviceType: 'action_msgs/srv/CancelGoal'
+    });
 }
 
-// 2. Publisher Setup (will be initialized after connection)
 // 2. Publisher Setup (will be initialized after connection)
 var cmdVel = null;
 var goalTopic = null;
 var navStatusTopic = null;
 var saveMapClient = null;
 var loadMapClient = null;
+var cancelGoalService = null;
 
 // State
 var maxLinearSpeed = 1.0; // Max speed at 100% slider
@@ -838,49 +845,29 @@ function resetNavUI() {
 
 // Cancel ongoing navigation
 function cancelNavigation() {
-    if (currentGoalId) {
-        var request = new ROSLIB.ServiceRequest({
-            goal_info: {
-                goal_id: {
-                    id: currentGoalId
-                }
-            }
-        });
+    console.log('Cancelling navigation...');
 
-        cancelGoalService.callService(request, function (result) {
-            console.log('Goal cancelled:', result);
-            currentGoalId = null;
-            updateNavStatusText('Navigation cancelled');
-            document.getElementById('cancel-nav').style.display = 'none';
-            document.getElementById('nav-progress').style.width = '0%';
-        }, function (error) {
-            console.error('Error calling cancel service:', error);
+    // ROS2 Action Cancel: Send empty goal_info to cancel all goals
+    var request = new ROSLIB.ServiceRequest({
+        goal_info: {
+            goal_id: {
+                uuid: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // Zero UUID = Cancel All
+            },
+            stamp: { sec: 0, nanosec: 0 }
+        }
+    });
 
-            // Publish empty goal to stop as a fallback
-            var stopMessage = new ROSLIB.Message({
-                header: {
-                    frame_id: 'map',
-                    stamp: { sec: 0, nanosec: 0 }
-                },
-                pose: {
-                    position: { x: 0, y: 0, z: 0 },
-                    orientation: { x: 0, y: 0, z: 0, w: 1 }
-                }
-            });
-
-            // Assuming you have a goalTopic defined elsewhere to publish the stopMessage
-            // goalTopic.publish(stopMessage);
-
-            console.log('Cancelling navigation via fallback');
-            currentGoalId = null;
-            updateNavStatusText('Navigation cancelled');
-            document.getElementById('cancel-nav').style.display = 'none';
-            document.getElementById('nav-progress').style.width = '0%';
-
-            // Fixed the combined lines from your snippet
-            updateNavStatusText('Ready');
-        });
-    }
+    cancelGoalService.callService(request, function (result) {
+        console.log('Cancel result:', result);
+        // Result code 0 = ERROR, 1 = NONE, 2 = UNKNOWN_GOAL, 3 = GOAL_CANCELLED
+        updateNavStatusText('Navigation Cancelled');
+        resetNavUI();
+    }, function (error) {
+        console.error('Failed to cancel navigation:', error);
+        // Even if it fails, reset UI so user isn't stuck
+        updateNavStatusText('Cancel Failed (Check Logic)');
+        setTimeout(resetNavUI, 1000);
+    });
 }
 
 // Update progress display
@@ -1528,6 +1515,9 @@ window.loadMapFromModal = async function (mapName) {
         // Switch to AUTO mode if not already there
         if (currentMode !== 'AUTO') {
             setMode('AUTO');
+        } else {
+            // Force pause SLAM even if already in AUTO (loading map might have reset backend)
+            toggleSlamMapping(true);
         }
 
         showDialog(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`, 'Map Loaded');
