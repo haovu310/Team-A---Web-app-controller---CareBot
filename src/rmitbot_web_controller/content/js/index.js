@@ -299,6 +299,9 @@ function updateKeyDrive() {
 var currentMode = 'IDLE'; // 'IDLE', 'MANUAL', 'AUTO'
 var currentLoadedMap = null; // Track currently loaded map name
 var savedMaps = []; // List of saved maps
+var isMappingActive = false; // Track if user is actively building a map in MANUAL mode
+var hasUnsavedMapChanges = false; // Track if map has been modified without saving
+var isMapLoadedForNav = false; // Track if a map has been loaded for navigation in AUTO mode
 
 // Nav2 Navigation - Use topic-based approach for ROS2 compatibility (initialized later)
 // var goalTopic will be created in initializeRosTopics()
@@ -429,6 +432,51 @@ function loadAndLaunchMap(mapName) {
 
 // Mode switching functions
 function setMode(mode) {
+    // Validation: Check if switching from MANUAL with unsaved mapping
+    if (currentMode === 'MANUAL' && mode !== 'MANUAL' && (isMappingActive || hasUnsavedMapChanges)) {
+        const confirmSwitch = confirm(
+            '⚠️ WARNING: You have an active mapping session!\\n\\n' +
+            'Switching modes will lose any unsaved map data.\\n\\n' +
+            'Would you like to:\\n' +
+            '• Click "Cancel" to stay in MANUAL mode and save your map\\n' +
+            '• Click "OK" to discard changes and switch modes'
+        );
+
+        if (!confirmSwitch) {
+            // User wants to stay and save - revert mode selection
+            updateModeUI(); // Refresh UI to show current mode
+
+            // Show save section and highlight it
+            const saveSection = document.getElementById('save-map-section');
+            if (saveSection) {
+                saveSection.style.animation = 'pulse 1s ease-in-out 3';
+                setTimeout(() => {
+                    saveSection.style.animation = '';
+                }, 3000);
+            }
+            return; // Don't switch modes
+        }
+
+        // User confirmed - reset mapping state
+        isMappingActive = false;
+        hasUnsavedMapChanges = false;
+    }
+
+    // Validation: Check if entering AUTO mode without a loaded map
+    if (mode === 'AUTO' && !isMapLoadedForNav) {
+        // Allow mode switch but show warning
+        setTimeout(() => {
+            alert(
+                '📍 Navigation Mode Activated\\n\\n' +
+                'Before you can navigate, you need to load a saved map:\\n\\n' +
+                '1. Click "Manage Maps" button below\\n' +
+                '2. Select a map from the list\\n' +
+                '3. Click "Load" to activate it\\n\\n' +
+                'Once loaded, you can set navigation goals!'
+            );
+        }, 500);
+    }
+
     currentMode = mode;
     updateModeUI();
 
@@ -443,6 +491,11 @@ function setMode(mode) {
         document.querySelector('.movement-section').style.display = 'none';
         document.querySelector('.speed-section').style.display = 'none';
         document.getElementById('save-map-section').style.display = 'none';
+
+        // Clear the map visualization if no map is loaded
+        if (!isMapLoadedForNav) {
+            clearMapVisualization();
+        }
 
     } else if (mode === 'MANUAL') {
         document.getElementById('auto-map-section').style.display = 'none';
@@ -462,6 +515,10 @@ function setMode(mode) {
         // Show save map section in MANUAL mode
         document.getElementById('save-map-section').style.display = 'block';
 
+        // Start mapping session
+        isMappingActive = true;
+        isMapLoadedForNav = false; // Clear navigation map flag
+
     } else {
         // IDLE: Show manual only
         document.getElementById('auto-map-section').style.display = 'none';
@@ -473,6 +530,11 @@ function setMode(mode) {
         document.querySelector('.movement-section').style.display = 'none';
         document.querySelector('.speed-section').style.display = 'none';
         document.getElementById('save-map-section').style.display = 'none';
+
+        // Reset mapping state
+        isMappingActive = false;
+        hasUnsavedMapChanges = false;
+        isMapLoadedForNav = false;
     }
 
     // Cancel any ongoing navigation when leaving AUTO mode
@@ -484,7 +546,20 @@ function setMode(mode) {
 // Send navigation goal to Nav2
 function sendNavGoal(x, y, yaw) {
     if (currentMode !== 'AUTO') {
-        alert('Please switch to AUTO mode to navigate.');
+        alert('⚠️ Navigation Unavailable\\n\\nPlease switch to AUTO mode to navigate.');
+        return;
+    }
+
+    if (!isMapLoadedForNav) {
+        alert('⚠️ No Map Loaded\\n\\nYou must load a saved map before navigating.\\n\\nClick "Manage Maps" to load a map.');
+        // Highlight the manage maps button
+        const manageMapsBtn = document.getElementById('btn-manage-maps-auto');
+        if (manageMapsBtn) {
+            manageMapsBtn.style.animation = 'pulse 1s ease-in-out 3';
+            setTimeout(() => {
+                manageMapsBtn.style.animation = '';
+            }, 3000);
+        }
         return;
     }
 
@@ -643,6 +718,26 @@ var gridClient = null;
 var laserScanClient = null;
 var poseListener = null;
 
+// Clear map visualization
+function clearMapVisualization() {
+    // Show placeholder
+    const placeholder = document.getElementById('map-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'flex';
+        placeholder.innerHTML = `
+            <i class="fas fa-map-marked-alt" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+            <p>No map loaded. Click "Manage Maps" to load a saved map.</p>
+        `;
+    }
+
+    // Clear viewer if it exists
+    if (viewer && viewer.scene) {
+        viewer.scene.removeAllChildren();
+    }
+
+    console.log('Map visualization cleared');
+}
+
 // Helper function to fit map to viewer (Issue 4)
 function fitMapToViewer() {
     if (!viewer || !gridClient || !gridClient.currentGrid) {
@@ -712,6 +807,11 @@ function initMap() {
             const placeholder = document.getElementById('map-placeholder');
             if (placeholder) {
                 placeholder.style.display = 'none';
+            }
+
+            // Track unsaved changes if in MANUAL mode
+            if (currentMode === 'MANUAL' && isMappingActive) {
+                hasUnsavedMapChanges = true;
             }
         });
     }
@@ -830,6 +930,9 @@ if (btnSaveManualMap) {
                 manualSaveStatus.style.color = "var(--success)";
             }
             if (manualMapName) manualMapName.value = '';
+
+            // Reset unsaved changes flag
+            hasUnsavedMapChanges = false;
 
             setTimeout(() => {
                 if (manualSaveStatus) manualSaveStatus.innerText = "";
@@ -1027,6 +1130,9 @@ if (btnModalSaveMap) {
             }
             if (modalMapName) modalMapName.value = '';
 
+            // Reset unsaved changes flag
+            hasUnsavedMapChanges = false;
+
             // Refresh the maps list
             setTimeout(() => {
                 loadMapsToModal();
@@ -1052,8 +1158,23 @@ window.loadMapFromModal = function (mapName) {
 
     // Issue 2: Prevent loading in MANUAL mode (would overlay current map)
     if (currentMode === 'MANUAL') {
-        alert('Cannot load map while in MANUAL mode!\n\nSwitch to IDLE or AUTO mode first to avoid map overlay.');
+        alert('⚠️ Cannot Load Map in MANUAL Mode\n\nYou are currently building a map with SLAM.\n\nTo load a saved map for navigation:\n1. Switch to IDLE or AUTO mode first\n2. Save your current work if needed\n3. Then load the map');
         return;
+    }
+
+    // Warn if not in AUTO mode
+    if (currentMode !== 'AUTO') {
+        const proceedToAuto = confirm(
+            '📍 Load Map for Navigation?\n\n' +
+            'This map will be loaded for autonomous navigation.\n\n' +
+            'Would you like to:\n' +
+            '• Click "OK" to load map and switch to AUTO mode\n' +
+            '• Click "Cancel" to stay in current mode'
+        );
+
+        if (!proceedToAuto) {
+            return;
+        }
     }
 
     var request = new ROSLIB.ServiceRequest({
@@ -1077,7 +1198,17 @@ window.loadMapFromModal = function (mapName) {
 
     loadMapClient.callService(request, function (result) {
         console.log('Map loaded successfully:', result);
-        alert(`Map "${mapName}" loaded successfully! You can now switch to AUTO mode for navigation.`);
+
+        // Set flag indicating map is loaded for navigation
+        isMapLoadedForNav = true;
+        currentLoadedMap = mapName;
+
+        // Switch to AUTO mode if not already there
+        if (currentMode !== 'AUTO') {
+            setMode('AUTO');
+        }
+
+        alert(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`);
         hideMapsModal();
 
         // Wait for the /map topic to start publishing the loaded map, then re-fit the viewer
