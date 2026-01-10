@@ -582,6 +582,27 @@ async function setMode(mode) {
         hasUnsavedMapChanges = false;
     }
 
+    // Validation: Check if exiting AUTO mode
+    if (currentMode === 'AUTO' && mode !== 'AUTO') {
+        const confirmExit = await showConfirm(
+            '⚠️ Exit Navigation Mode?\n\n' +
+            'Are you sure you want to exit AUTO mode?\n\n' +
+            'This will UNLOAD the current map and stop navigation.\n' +
+            'You will need to reload a map to navigate again.',
+            'Exit Navigation'
+        );
+
+        if (!confirmExit) {
+            updateModeUI(); // Revert UI check
+            return; // Stay in AUTO mode
+        }
+
+        // Confirmed exit - Reset navigation state
+        isMapLoadedForNav = false;
+        currentLoadedMap = null;
+        clearMapVisualization(); // Clear the map visual
+    }
+
     // Validation: Check if entering AUTO mode without a loaded map
     if (mode === 'AUTO' && !isMapLoadedForNav) {
         // Allow mode switch but show warning
@@ -639,7 +660,12 @@ async function setMode(mode) {
 
         // Start mapping session
         isMappingActive = true;
+        isMappingActive = true;
         isMapLoadedForNav = false; // Clear navigation map flag
+
+        // Clear any previous map visualization to start fresh for SLAM
+        console.log('Entering MANUAL mode: Clearing map visualization for SLAM');
+        clearMapVisualization();
 
     } else {
         // IDLE: Show manual only
