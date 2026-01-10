@@ -229,6 +229,45 @@ function initializeRosTopics() {
         messageType: 'geometry_msgs/PoseStamped'
     });
 
+
+
+    // Subscribe to Navigation Status
+    navStatusTopic = new ROSLIB.Topic({
+        ros: ros,
+        name: '/navigate_to_pose/_action/status',
+        messageType: 'action_msgs/GoalStatusArray'
+    });
+
+    navStatusTopic.subscribe(function (message) {
+        // Only react if we are actively tracking a goal
+        if (!currentGoalId) return;
+
+        // Check status of latest goal
+        // Nav2 status list usually contains all active/recent goals
+        if (message.status_list && message.status_list.length > 0) {
+            // Get the last status (most recent) - usually corresponds to our goal if we just sent it
+            const latest = message.status_list[message.status_list.length - 1];
+
+            // Status codes: 4=SUCCEEDED, 5=CANCELED, 6=ABORTED
+            if (latest.status === 4) {
+                console.log('Goal SUCCEEDED');
+                updateNavStatusText('Goal Reached! 🎉');
+                resetNavUI();
+            } else if (latest.status === 6) {
+                console.log('Goal ABORTED');
+                updateNavStatusText('Goal Failed (Aborted) ❌');
+                resetNavUI();
+            } else if (latest.status === 5) {
+                console.log('Goal CANCELED');
+                updateNavStatusText('Navigation Cancelled');
+                resetNavUI();
+            } else if (latest.status === 2) {
+                // EXECUTING
+                updateNavStatusText('Navigating...');
+            }
+        }
+    });
+
     saveMapClient = new ROSLIB.Service({
         ros: ros,
         name: '/slam_toolbox/serialize_map',
@@ -243,8 +282,10 @@ function initializeRosTopics() {
 }
 
 // 2. Publisher Setup (will be initialized after connection)
+// 2. Publisher Setup (will be initialized after connection)
 var cmdVel = null;
 var goalTopic = null;
+var navStatusTopic = null;
 var saveMapClient = null;
 var loadMapClient = null;
 
@@ -757,14 +798,13 @@ function sendNavGoal(x, y, yaw) {
     updateNavStatusText('Goal sent to Nav2...');
     document.getElementById('cancel-nav').style.display = 'block';
 
-    // Auto-hide cancel button after 30 seconds
-    setTimeout(function () {
-        if (currentGoalId) {
-            document.getElementById('cancel-nav').style.display = 'none';
-            updateNavStatusText('Goal completed or timed out');
-            currentGoalId = null;
-        }
-    }, 30000);
+    // Removed fixed 30s timeout - now using real-time feedback from action status
+}
+
+function resetNavUI() {
+    currentGoalId = null;
+    document.getElementById('cancel-nav').style.display = 'none';
+    document.getElementById('nav-progress').style.width = '0%';
 }
 
 // Cancel ongoing navigation
@@ -815,21 +855,7 @@ function cancelNavigation() {
 }
 
 // Update progress display
-function updateNavProgress(feedback) {
-    // NavigateToPose feedback contains distance_remaining
-    if (feedback && feedback.distance_remaining !== undefined) {
-        // Just a visual approximation: assume starting roughly < 5m away for 0-100%
-        // A better way is to capture start distance, but this suffices for simple UI
-        var dist = feedback.distance_remaining;
-        var pct = Math.max(0, Math.min(100, (1 - (dist / 3.0)) * 100)); // Assume 3m max trip for progress bar
 
-        // If really close, snap to 95%
-        if (dist < 0.2) pct = 95;
-
-        document.getElementById('nav-progress').style.width = pct + '%';
-        updateNavStatusText(`Dist: ${dist.toFixed(2)}m`);
-    }
-}
 
 // UI update helpers
 function updateModeUI() {
@@ -881,7 +907,10 @@ setMode('IDLE');
 var viewer = null;
 var gridClient = null;
 var laserScanClient = null;
-var poseListener = null;
+var tfTopic = null;
+var robotPose = { x: 0, y: 0, rotation: 0 };
+var odomPose = { x: 0, y: 0, rotation: 0 };
+var mapCorrection = { x: 0, y: 0, rotation: 0 };
 
 // Clear map visualization
 function clearMapVisualization() {
@@ -901,14 +930,14 @@ function clearMapVisualization() {
     }
 
     // Properly unsubscribe listeners to prevent "zombie" connections
-    if (poseListener) {
+    if (tfTopic) {
         try {
-            poseListener.unsubscribe();
-            console.log('Unsubscribed from pose listener');
+            tfTopic.unsubscribe();
+            console.log('Unsubscribed from TF topic');
         } catch (e) {
-            console.warn('Error unsubscribing pose listener:', e);
+            console.warn('Error unsubscribing TF topic:', e);
         }
-        poseListener = null;
+        tfTopic = null;
     }
 
     if (gridClient) {
@@ -1038,33 +1067,75 @@ function initMap() {
     //     });
     // }
 
-    // Add robot pose visualization
-    if (!poseListener) {
+    // Add robot pose visualization using raw TF topic (fallback)
+    if (!tfTopic) {
         // Create a shape for the robot
         var robotMarker = new createjs.Shape();
         robotMarker.graphics.beginFill('#FF69B4').drawCircle(0, 0, 0.2); // 0.2m radius pink circle
         robotMarker.graphics.beginFill('#FF1493').moveTo(0, 0).lineTo(0.3, 0.1).lineTo(0.3, -0.1).closePath(); // Direction arrow
         viewer.scene.addChild(robotMarker);
 
-        // Subscribe to robot pose
-        poseListener = new ROSLIB.Topic({
+        // Subscribe to /tf to get transforms manually
+        tfTopic = new ROSLIB.Topic({
             ros: ros,
-            name: '/amcl_pose',
-            messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            name: '/tf',
+            messageType: 'tf2_msgs/TFMessage'
         });
 
-        poseListener.subscribe(function (message) {
-            var pose = message.pose.pose;
-            var rosPos = new ROSLIB.Vector3(pose.position);
-            var viewerPos = viewer.scene.rosToCanvas(rosPos);
+        tfTopic.subscribe(function (message) {
+            // Process transforms
+            // We look for 'odom' -> 'base_link' (movement) AND 'map' -> 'odom' (correction)
+            if (message.transforms) {
+                message.transforms.forEach(function (t) {
+                    var r = t.transform.rotation;
+                    var yaw = Math.atan2(2.0 * (r.w * r.z + r.x * r.y), 1.0 - 2.0 * (r.y * r.y + r.z * r.z));
+                    var tx = t.transform.translation.x;
+                    var ty = t.transform.translation.y;
 
-            robotMarker.x = viewerPos.x;
-            robotMarker.y = viewerPos.y;
+                    if (t.child_frame_id === 'base_link' || t.child_frame_id === 'base_footprint') {
+                        // Found odom -> base_link
+                        odomPose.x = tx;
+                        odomPose.y = ty;
+                        odomPose.rotation = yaw;
+                    } else if (t.child_frame_id === 'odom') {
+                        // Found map -> odom (AMCL correction)
+                        mapCorrection.x = tx;
+                        mapCorrection.y = ty;
+                        mapCorrection.rotation = yaw;
+                    }
+                });
 
-            // Calculate rotation from quaternion
-            var q = pose.orientation;
-            var yaw = Math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z));
-            robotMarker.rotation = yaw * 180 / Math.PI; // Convert to degrees for CreateJS
+                // Estimate global pose: Simplified composition
+                // Ideally this requires full matrix multiplication, but for 2D visual:
+                // Global X approx = Correction X + (Odom X rotated by Correction Yaw)
+                // This is a naive approximation but better than raw odom
+                var cosC = Math.cos(mapCorrection.rotation);
+                var sinC = Math.sin(mapCorrection.rotation);
+
+                var globalX = mapCorrection.x + (odomPose.x * cosC - odomPose.y * sinC);
+                var globalY = mapCorrection.y + (odomPose.x * sinC + odomPose.y * cosC);
+                var globalYaw = mapCorrection.rotation + odomPose.rotation;
+
+                // Update Marker
+                // The viewer scene is scaled to meters by ROS2D, so we use global coordinates directly.
+                // Note: ROS2D Viewer usually handles the coordinate system (meters).
+                // We trust globalX/globalY (calculated from Odom + Map correction).
+
+                robotMarker.x = globalX;
+                robotMarker.y = globalY;
+
+                robotMarker.rotation = -globalYaw * 180 / Math.PI; // Invert rotation for Canvas? Let's check visual.
+                // Actually, standard ROS2D usually matches rotation if coordinates are aligned.
+                // Let's stick to standard rotation first:
+                robotMarker.rotation = -globalYaw * 180 / Math.PI; // ROS is CCW, Canvas is CW usually? 
+                // Wait, standard CreateJS rotation is CW. ROS is CCW.
+                // So yes, negate the angle.
+
+                // Keep marker on top
+                if (viewer.scene.getChildIndex(robotMarker) !== viewer.scene.numChildren - 1) {
+                    viewer.scene.setChildIndex(robotMarker, viewer.scene.numChildren - 1);
+                }
+            }
         });
     }
 }
