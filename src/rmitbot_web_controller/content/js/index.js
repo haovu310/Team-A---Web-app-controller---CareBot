@@ -716,6 +716,9 @@ async function setMode(mode) {
         // Increase delay to 500ms to ensure backend node switch is clean and topics are ready
         setTimeout(initMap, 500);
 
+        // RESUME SLAM Mapping in MANUAL mode
+        toggleSlamMapping(false);
+
         // Show instruction dialog
         setTimeout(() => {
             showDialog(
@@ -751,6 +754,28 @@ async function setMode(mode) {
     if (mode !== 'AUTO' && currentGoalId) {
         cancelNavigation();
     }
+}
+
+// Helper to Pause/Resume SLAM Mapping
+// shouldPause: true = stop updating map (Auto mode), false = resume mapping (Manual mode)
+function toggleSlamMapping(shouldPause) {
+    if (!ros) return;
+
+    var pauseClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/pause_new_measurements',
+        serviceType: 'slam_toolbox/Pause'
+    });
+
+    var request = new ROSLIB.ServiceRequest({
+        pause: shouldPause
+    });
+
+    pauseClient.callService(request, function (result) {
+        console.log(`SLAM Mapping ${shouldPause ? 'PAUSED' : 'RESUMED'}:`, result);
+    }, function (error) {
+        console.warn(`Failed to ${shouldPause ? 'pause' : 'resume'} SLAM mapping:`, error);
+    });
 }
 
 // Send navigation goal to Nav2
@@ -1492,8 +1517,6 @@ window.loadMapFromModal = async function (mapName) {
         // Re-initialize map to create fresh grid client
         setTimeout(() => {
             initMap();
-            // User feedback
-            alert(`Map "${mapName}" loaded!\n\nIf the robot seems misaligned:\n1. Use "2D Pose Estimate" in RViz.\n2. Or drive manually to let SLAM converge.`);
         }, 300);
 
         // Hide placeholder immediately
