@@ -89,6 +89,125 @@ function attemptReconnection() {
 
 var ros = createRosConnection();
 
+// === CUSTOM DIALOG SYSTEM ===
+// Beautiful styled dialogs to replace ugly browser alerts
+
+function showDialog(message, title = 'CareBot') {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-dialog');
+        const titleEl = document.getElementById('dialog-title');
+        const messageEl = document.getElementById('dialog-message');
+        const icon = document.getElementById('dialog-icon');
+        const okBtn = document.getElementById('dialog-ok');
+        const cancelBtn = document.getElementById('dialog-cancel');
+        const header = overlay.querySelector('.custom-dialog-header');
+
+        // Set content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        // Set icon based on message content
+        icon.className = 'fas';
+        header.className = 'custom-dialog-header';
+
+        if (message.includes('⚠️') || message.includes('WARNING')) {
+            icon.className += ' fa-exclamation-triangle';
+            header.classList.add('warning');
+        } else if (message.includes('❌') || message.includes('Error') || message.includes('Failed')) {
+            icon.className += ' fa-times-circle';
+            header.classList.add('error');
+        } else if (message.includes('✅') || message.includes('success')) {
+            icon.className += ' fa-check-circle';
+            header.classList.add('success');
+        } else if (message.includes('📍') || message.includes('ℹ️')) {
+            icon.className += ' fa-info-circle';
+            header.classList.add('info');
+        } else {
+            icon.className += ' fa-exclamation-circle';
+        }
+
+        // Hide cancel button for alerts
+        cancelBtn.style.display = 'none';
+
+        // Show dialog
+        overlay.style.display = 'flex';
+
+        // Handle OK click
+        const handleOk = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            resolve(true);
+        };
+
+        okBtn.addEventListener('click', handleOk);
+
+        // Handle ESC key
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                overlay.style.display = 'none';
+                document.removeEventListener('keydown', handleEsc);
+                resolve(true);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    });
+}
+
+function showConfirm(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-dialog');
+        const titleEl = document.getElementById('dialog-title');
+        const messageEl = document.getElementById('dialog-message');
+        const icon = document.getElementById('dialog-icon');
+        const okBtn = document.getElementById('dialog-ok');
+        const cancelBtn = document.getElementById('dialog-cancel');
+        const header = overlay.querySelector('.custom-dialog-header');
+
+        // Set content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        // Set icon
+        icon.className = 'fas fa-question-circle';
+        header.className = 'custom-dialog-header warning';
+
+        // Show both buttons
+        cancelBtn.style.display = 'inline-block';
+
+        // Show dialog
+        overlay.style.display = 'flex';
+
+        // Handle button clicks
+        const handleOk = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(false);
+        };
+
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+
+        // Handle ESC key
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                overlay.style.display = 'none';
+                document.removeEventListener('keydown', handleEsc);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    });
+}
+
+
 // UI Elements
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('connection-text');
@@ -431,15 +550,16 @@ function loadAndLaunchMap(mapName) {
 }
 
 // Mode switching functions
-function setMode(mode) {
+async function setMode(mode) {
     // Validation: Check if switching from MANUAL with unsaved mapping
     if (currentMode === 'MANUAL' && mode !== 'MANUAL' && (isMappingActive || hasUnsavedMapChanges)) {
-        const confirmSwitch = confirm(
-            '⚠️ WARNING: You have an active mapping session!\\n\\n' +
-            'Switching modes will lose any unsaved map data.\\n\\n' +
-            'Would you like to:\\n' +
-            '• Click "Cancel" to stay in MANUAL mode and save your map\\n' +
-            '• Click "OK" to discard changes and switch modes'
+        const confirmSwitch = await showConfirm(
+            '⚠️ WARNING: You have an active mapping session!\n\n' +
+            'Switching modes will lose any unsaved map data.\n\n' +
+            'Would you like to:\n' +
+            '• Click "Cancel" to stay in MANUAL mode and save your map\n' +
+            '• Click "OK" to discard changes and switch modes',
+            'Unsaved Changes'
         );
 
         if (!confirmSwitch) {
@@ -466,13 +586,14 @@ function setMode(mode) {
     if (mode === 'AUTO' && !isMapLoadedForNav) {
         // Allow mode switch but show warning
         setTimeout(() => {
-            alert(
-                '📍 Navigation Mode Activated\\n\\n' +
-                'Before you can navigate, you need to load a saved map:\\n\\n' +
-                '1. Click "Manage Maps" button below\\n' +
-                '2. Select a map from the list\\n' +
-                '3. Click "Load" to activate it\\n\\n' +
-                'Once loaded, you can set navigation goals!'
+            showDialog(
+                '📍 Navigation Mode Activated\n\n' +
+                'Before you can navigate, you need to load a saved map:\n\n' +
+                '1. Click "Manage Maps" button below\n' +
+                '2. Select a map from the list\n' +
+                '3. Click "Load" to activate it\n\n' +
+                'Once loaded, you can set navigation goals!',
+                'AUTO Mode'
             );
         }, 500);
     }
@@ -547,12 +668,12 @@ function setMode(mode) {
 // Send navigation goal to Nav2
 function sendNavGoal(x, y, yaw) {
     if (currentMode !== 'AUTO') {
-        alert('⚠️ Navigation Unavailable\\n\\nPlease switch to AUTO mode to navigate.');
+        showDialog('⚠️ Navigation Unavailable\n\nPlease switch to AUTO mode to navigate.', 'Navigation Unavailable');
         return;
     }
 
     if (!isMapLoadedForNav) {
-        alert('⚠️ No Map Loaded\\n\\nYou must load a saved map before navigating.\\n\\nClick "Manage Maps" to load a map.');
+        showDialog('⚠️ No Map Loaded\n\nYou must load a saved map before navigating.\n\nClick "Manage Maps" to load a map.', 'No Map Loaded');
         // Highlight the manage maps button
         const manageMapsBtn = document.getElementById('btn-manage-maps-auto');
         if (manageMapsBtn) {
@@ -565,7 +686,7 @@ function sendNavGoal(x, y, yaw) {
     }
 
     if (!goalTopic || !ros || !ros.isConnected) {
-        alert('ROS connection not available. Please wait for connection.');
+        showDialog('ROS connection not available. Please wait for connection.', 'Connection Error');
         return;
     }
 
@@ -910,7 +1031,7 @@ if (btnSaveManualMap) {
     btnSaveManualMap.addEventListener('click', function () {
         const name = manualMapName ? manualMapName.value.trim() : '';
         if (!name) {
-            alert('Please enter a map name');
+            showDialog('Please enter a map name', 'Required');
             return;
         }
 
@@ -982,7 +1103,7 @@ function showMapsModal() {
     console.log('showMapsModal called');
     if (!mapsModal) {
         console.error('Modal element not found!');
-        alert('Error: Modal not found. Please refresh the page.');
+        showDialog('Error: Modal not found. Please refresh the page.', 'Error');
         return;
     }
     mapsModal.style.display = 'flex';
@@ -1109,7 +1230,7 @@ if (btnModalSaveMap) {
     btnModalSaveMap.addEventListener('click', function () {
         const name = modalMapName ? modalMapName.value.trim() : '';
         if (!name) {
-            alert('Please enter a map name');
+            showDialog('Please enter a map name', 'Required');
             return;
         }
 
@@ -1154,18 +1275,18 @@ if (btnModalSaveMap) {
 }
 
 // Load Map from Modal (global function for onclick)
-window.loadMapFromModal = function (mapName) {
+window.loadMapFromModal = async function (mapName) {
     console.log('Loading map:', mapName);
 
     // Issue 2: Prevent loading in MANUAL mode (would overlay current map)
     if (currentMode === 'MANUAL') {
-        alert('⚠️ Cannot Load Map in MANUAL Mode\n\nYou are currently building a map with SLAM.\n\nTo load a saved map for navigation:\n1. Switch to IDLE or AUTO mode first\n2. Save your current work if needed\n3. Then load the map');
+        showDialog('⚠️ Cannot Load Map in MANUAL Mode\n\nYou are currently building a map with SLAM.\n\nTo load a saved map for navigation:\n1. Switch to IDLE or AUTO mode first\n2. Save your current work if needed\n3. Then load the map');
         return;
     }
 
     // Warn if not in AUTO mode
     if (currentMode !== 'AUTO') {
-        const proceedToAuto = confirm(
+        const proceedToAuto = await showConfirm(
             '📍 Load Map for Navigation?\n\n' +
             'This map will be loaded for autonomous navigation.\n\n' +
             'Would you like to:\n' +
@@ -1215,7 +1336,7 @@ window.loadMapFromModal = function (mapName) {
             setMode('AUTO');
         }
 
-        alert(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`);
+        showDialog(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`);
         hideMapsModal();
 
         // Wait for the /map topic to start publishing the loaded map, then re-fit the viewer

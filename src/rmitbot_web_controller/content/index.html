@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CareBot Control Station</title>
-    <link rel="stylesheet" href="css/index.css?v=2">
+    <link rel="stylesheet" href="css/index.css?v=3">
     <!-- Load dependencies in correct order -->
     <script src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
@@ -241,6 +241,23 @@
                     </div>
                     <span class="status-message" id="modal-save-status"></span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Dialog Modal -->
+    <div class="custom-dialog-overlay" id="custom-dialog" style="display: none;">
+        <div class="custom-dialog-content">
+            <div class="custom-dialog-header">
+                <i class="fas fa-exclamation-circle" id="dialog-icon"></i>
+                <h3 id="dialog-title">Alert</h3>
+            </div>
+            <div class="custom-dialog-body">
+                <p id="dialog-message"></p>
+            </div>
+            <div class="custom-dialog-footer">
+                <button class="btn-dialog-cancel" id="dialog-cancel" style="display: none;">Cancel</button>
+                <button class="btn-dialog-ok" id="dialog-ok">OK</button>
             </div>
         </div>
     </div>
