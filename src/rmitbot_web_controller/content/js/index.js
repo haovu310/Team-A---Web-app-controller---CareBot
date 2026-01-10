@@ -681,6 +681,10 @@ async function setMode(mode) {
             clearMapVisualization();
         }
 
+        // PAUSE SLAM Mapping in AUTO mode to prevent "Stacked Map" artifacts
+        // We want localization (AMCL/Graph matching) but NOT new nodes added to the map
+        toggleSlamMapping(true);
+
     } else if (mode === 'MANUAL') {
         document.getElementById('auto-map-section').style.display = 'none';
         document.getElementById('custom-goal-section').style.display = 'none';
@@ -1482,8 +1486,15 @@ window.loadMapFromModal = async function (mapName) {
         isMapLoadedForNav = true;
         currentLoadedMap = mapName;
 
-        // Re-initialize map to create fresh grid client since we cleared it
-        initMap();
+        // Fix for "Stacked Map": Force clear old visualizer before init new one
+        clearMapVisualization();
+
+        // Re-initialize map to create fresh grid client
+        setTimeout(() => {
+            initMap();
+            // User feedback
+            alert(`Map "${mapName}" loaded!\n\nIf the robot seems misaligned:\n1. Use "2D Pose Estimate" in RViz.\n2. Or drive manually to let SLAM converge.`);
+        }, 300);
 
         // Hide placeholder immediately
         const placeholder = document.getElementById('map-placeholder');
