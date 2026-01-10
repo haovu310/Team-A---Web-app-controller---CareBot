@@ -35,7 +35,7 @@ function createRosConnection() {
     });
 
     // Connection timeout handling
-    var connectionTimeout = setTimeout(function() {
+    var connectionTimeout = setTimeout(function () {
         console.warn('Connection timeout - closing and retrying...');
         ros.close();
     }, 10000); // 10 second timeout
@@ -71,9 +71,9 @@ function createRosConnection() {
 function attemptReconnection() {
     if (connectionRetryCount < maxRetries) {
         connectionRetryCount++;
-        console.log(`Attempting reconnection ${connectionRetryCount}/${maxRetries} in ${retryDelay/1000}s...`);
+        console.log(`Attempting reconnection ${connectionRetryCount}/${maxRetries} in ${retryDelay / 1000}s...`);
 
-        setTimeout(function() {
+        setTimeout(function () {
             console.log('Reconnecting...');
             ros = createRosConnection();
             initializeRosTopics();
@@ -776,15 +776,15 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('Camera stream URL set to:', cameraUrl);
 
         // Add error handler for camera stream
-        streamingImg.onerror = function() {
+        streamingImg.onerror = function () {
             console.error('Camera stream failed to load. Retrying in 5s...');
-            setTimeout(function() {
+            setTimeout(function () {
                 streamingImg.src = cameraUrl + '?t=' + Date.now(); // Cache bust
             }, 5000);
         };
 
         // Add load handler
-        streamingImg.onload = function() {
+        streamingImg.onload = function () {
             console.log('Camera stream connected successfully');
         };
     }
@@ -815,7 +815,7 @@ if (btnSaveManualMap) {
 
         // SerializePoseGraph uses 'filename' not 'name'
         var request = new ROSLIB.ServiceRequest({
-            filename: name
+            filename: 'maps/' + name
         });
 
         if (manualSaveStatus) {
@@ -1011,7 +1011,7 @@ if (btnModalSaveMap) {
 
         // SerializePoseGraph uses 'filename' not 'name'
         var request = new ROSLIB.ServiceRequest({
-            filename: name
+            filename: 'maps/' + name
         });
 
         if (modalSaveStatus) {
@@ -1057,7 +1057,7 @@ window.loadMapFromModal = function (mapName) {
     }
 
     var request = new ROSLIB.ServiceRequest({
-        filename: mapName,
+        filename: 'maps/' + mapName,
         match_type: 1  // 1 = START_AT_FIRST_NODE
     });
 

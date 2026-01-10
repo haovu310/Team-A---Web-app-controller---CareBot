@@ -33,7 +33,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             # Search dedicated maps directory - use absolute path to project root
             # This assumes the project is at /home/aesitof/Team-A---Web-app-controller---CareBot
-            maps_dir = Path('/home/aesitof/Team-A---Web-app-controller---CareBot/maps')
+            # maps_dir = Path('/home/aesitof/Team-A---Web-app-controller---CareBot/maps')
+            maps_dir = Path('/home/hao/Documents/App Control/team_A_web_app/maps')
+            print(f"DEBUG: Serving maps from {maps_dir}")
             if maps_dir.exists():
                 posegraph_files = list(maps_dir.glob('*.posegraph'))
                 for f in posegraph_files:
