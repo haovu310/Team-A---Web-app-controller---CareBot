@@ -12,6 +12,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 # ros2 launch rmitbot_controller controller.launch.py
+# ros2 launch rmitbot_controller controller.launch.py serial_port:=/dev/ttyUSB1
 
 def generate_launch_description():
     
@@ -23,6 +24,14 @@ def generate_launch_description():
     )
     use_sim_time = LaunchConfiguration('use_sim_time')
 
+    # Declare serial_port argument for ESP32
+    serial_port_arg = DeclareLaunchArgument(
+        'serial_port',
+        default_value='/dev/ttyUSB0',
+        description='Serial port for ESP32 motor controller (e.g., /dev/ttyUSB0)'
+    )
+    serial_port = LaunchConfiguration('serial_port')
+
     # Path to the controller config file
     pkg_path_controller =   get_package_share_directory("rmitbot_controller")
     config_controller =    os.path.join(pkg_path_controller, 'config', 'rmitbot_controller.yaml')
@@ -30,7 +39,17 @@ def generate_launch_description():
     # Path to the package
     pkg_path_description = get_package_share_directory("rmitbot_description")
     urdf_path = os.path.join(pkg_path_description, 'urdf', 'rmitbot.urdf.xacro')
-    robot_description = ParameterValue(Command([FindExecutable(name='xacro'), ' ', urdf_path, ' use_sim:=', use_sim_time]), value_type=str)
+    
+    # Pass serial_port to xacro
+    robot_description = ParameterValue(
+        Command([
+            FindExecutable(name='xacro'), ' ', urdf_path,
+            ' use_sim:=', use_sim_time,
+            ' serial_port:=', serial_port
+        ]), 
+        value_type=str
+    )
+    
     # Publish the robot static TF from the urdf
     robot_state_publisher = Node(
         package="robot_state_publisher",
@@ -99,6 +118,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             use_sim_time_arg,
+            serial_port_arg,
             robot_state_publisher, 
             controller_manager, 
             joint_state_broadcaster_spawner,

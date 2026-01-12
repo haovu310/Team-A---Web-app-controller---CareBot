@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    CycloneDDS Configuration for Raspberry Pi
+    
+    This config enables direct peer discovery with the PC/Laptop.
+    No multicast required - uses unicast to the PC's IP address.
+    
+    Usage:
+        export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+        export CYCLONEDDS_URI=file:///path/to/cyclonedds_pi.xml
+        ros2 launch rmitbot_bringup robot.launch.py
+    
+    IMPORTANT: Replace PC_IP_ADDRESS with your laptop's actual IP
+               (e.g., 192.168.1.100)
+-->
+<CycloneDDS xmlns="https://cdds.io/config">
+    <Domain id="any">
+        <General>
+            <Interfaces>
+                <!-- Raspberry Pi typically uses wlan0 for WiFi -->
+                <NetworkInterface name="wlan0" />
+            </Interfaces>
+            <AllowMulticast>true</AllowMulticast>
+        </General>
+        <Discovery>
+            <ParticipantIndex>auto</ParticipantIndex>
+            <Peers>
+                <!-- Replace with your PC/Laptop's IP address -->
+                <Peer address="PC_IP_ADDRESS"/>
+            </Peers>
+        </Discovery>
+        <Internal>
+            <MaxParticipants>120</MaxParticipants>
+        </Internal>
+        <SharedMemory>
+            <Enable>false</Enable>
+        </SharedMemory>
+    </Domain>
+</CycloneDDS>
