@@ -16,6 +16,9 @@
   <!-- controller_manager:      loading pkg from ros2_controller -->
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>controller_manager</exec_depend>
+  <exec_depend>rmitbot_description</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
   <!-- ==================================== -->
   <!-- Modifcation of .xml ends here -->
   <!-- ==================================== -->

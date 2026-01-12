@@ -14,7 +14,7 @@ def generate_launch_description():
         executable= 'teleop_twist_keyboard', 
         name=       'teleop_twist_keyboard', 
         output=     'screen', 
-        prefix=     'xterm -e', 
+        # prefix=     'xterm -e',  # Commented out - xterm not installed
         parameters=[ 
             {"use_sim_time": False}, 
             {'stamped': True},  

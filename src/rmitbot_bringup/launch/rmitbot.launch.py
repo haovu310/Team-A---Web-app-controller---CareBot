@@ -60,36 +60,41 @@ def generate_launch_description():
         os.path.join(pkg_path_navigation,"launch","twistmux.launch.py"),
     )
     
+    # 1.6: Web Controller for Pi (Rosbridge + Camera Stream)
+    web_rpi = IncludeLaunchDescription(
+        os.path.join(pkg_path_web, "launch", "web_rpi.launch.py"),
+    )
+    
     # ==================================================================================================
     #   SECTION 2: WORKSTATION / PC
     #   Run this section on the PC. Comment out SECTION 1 when running on the PC.
     # ==================================================================================================
     
-    # 2.1: Web Controller (Rosbridge + Web Server)
-    web_controller = IncludeLaunchDescription(
-        os.path.join(pkg_path_web, "launch", "web.launch.py"),
-    )
+    # # 2.1: Web Controller for PC (Rosbridge + HTTP Server)
+    # web_pc = IncludeLaunchDescription(
+    #     os.path.join(pkg_path_web, "launch", "web_pc.launch.py"),
+    # )
     
-    # 2.2: Visualization (RViz)
-    display = IncludeLaunchDescription(
-        os.path.join(pkg_path_description,"launch","display.launch.py"),
-    )
+    # # 2.2: Visualization (RViz)
+    # display = IncludeLaunchDescription(
+    #     os.path.join(pkg_path_description,"launch","display.launch.py"),
+    # )
     
-    # 2.3: Mapping (SLAM Toolbox)
-    mapping = IncludeLaunchDescription(
-        os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
-    )
+    # # 2.3: Mapping (SLAM Toolbox)
+    # mapping = IncludeLaunchDescription(
+    #     os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
+    # )
     
-    # 2.4: Navigation (Nav2)
-    navigation = IncludeLaunchDescription(
-        os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
-    )
+    # # 2.4: Navigation (Nav2)
+    # navigation = IncludeLaunchDescription(
+    #     os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
+    # )
     
-    # Delayed Start for Navigation (Wait for Map/SLAM)
-    navigation_delayed = TimerAction(
-        period = 5., 
-        actions=[navigation]
-    )
+    # # Delayed Start for Navigation (Wait for Map/SLAM)
+    # navigation_delayed = TimerAction(
+    #     period = 5., 
+    #     actions=[navigation]
+    # )
 
     # ==================================================================================================
     #   LAUNCH DESCRIPTION
@@ -99,15 +104,16 @@ def generate_launch_description():
         enable_vision_arg,
         
         # --- ROBOT SECTION (Uncomment for Pi) ---
-        # controller,
-        # rplidar,
-        # localization,
+        controller,
+        rplidar,
+        localization,
         # vision,
-        # twistmux,     
+        twistmux,
+        web_rpi,
 
         # --- PC SECTION (Uncomment for Workstation) ---
-        web_controller,
-        display,
+        # web_pc,
+        # display,
         # mapping,            # Enable for SLAM
         # navigation_delayed, # Enable for Nav2
         

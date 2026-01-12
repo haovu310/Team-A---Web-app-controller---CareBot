@@ -30,7 +30,7 @@ def generate_launch_description():
     # Path to the package
     pkg_path_description = get_package_share_directory("rmitbot_description")
     urdf_path = os.path.join(pkg_path_description, 'urdf', 'rmitbot.urdf.xacro')
-    robot_description = ParameterValue(Command(['xacro ', '\'', urdf_path, '\'', ' use_sim:=', use_sim_time]), value_type=str)
+    robot_description = ParameterValue(Command([FindExecutable(name='xacro'), ' ', urdf_path, ' use_sim:=', use_sim_time]), value_type=str)
     # Publish the robot static TF from the urdf
     robot_state_publisher = Node(
         package="robot_state_publisher",
