@@ -342,8 +342,8 @@ function stop() {
     publishTwist(0, 0, 0);
 }
 
-// 5. Button Bindings - Optimized publish rate for RPi
-var PUBLISH_RATE_MS = 150; // Reduced from 100ms to 150ms to lower CPU load
+// 5. Button Bindings - Optimized publish rate for smooth control
+var PUBLISH_RATE_MS = 16; // 16ms = ~60Hz for smooth, responsive control
 
 function bindBtn(id, lx, ly, az) {
     const btn = document.getElementById(id);
