@@ -15,6 +15,16 @@ PORT = 8000
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     """Custom HTTP handler to add API endpoints"""
 
+    # Class variable to store the web directory
+    web_dir = None
+
+    def __init__(self, *args, **kwargs):
+        # Set the directory before calling parent init
+        if self.web_dir:
+            super().__init__(*args, directory=self.web_dir, **kwargs)
+        else:
+            super().__init__(*args, **kwargs)
+
     def do_GET(self):
         # Parse the URL
         parsed_path = urlparse(self.path)
@@ -83,8 +93,8 @@ class WebServerNode(Node):
             web_dir = os.path.join(package_share_directory, 'content')
             self.get_logger().info(f'Serving content from: {web_dir}')
 
-            # Change directory to serve files
-            os.chdir(web_dir)
+            # Set the web directory for the handler (don't change cwd)
+            CustomHTTPRequestHandler.web_dir = web_dir
 
             handler = CustomHTTPRequestHandler
             self.httpd = socketserver.TCPServer(("", self.port), handler)

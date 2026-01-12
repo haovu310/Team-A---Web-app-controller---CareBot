@@ -53,8 +53,8 @@ def generate_launch_description():
             ('cmd_vel_out', 'cmd_vel')], 
     ) 
 
-    return LaunchDescription([ 
-        twistmux_node,  
-        teleop_keyboard,
-        twist_stamper_node, 
+    return LaunchDescription([
+        twistmux_node,
+        # teleop_keyboard,  # Disabled - web UI provides keyboard control
+        twist_stamper_node,
     ]) 
