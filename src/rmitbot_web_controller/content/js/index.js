@@ -339,48 +339,88 @@ function publishTwist(lx, ly, az) {
 }
 
 function stop() {
-    publishTwist(0, 0, 0);
+    targetVelocity.lx = 0;
+    targetVelocity.ly = 0;
+    targetVelocity.az = 0;
 }
 
-// 5. Button Bindings - Optimized publish rate for smooth control
-var PUBLISH_RATE_MS = 16; // 16ms = ~60Hz for smooth, responsive control
+// ===================================================================
+// 5. SMOOTH VELOCITY CONTROL WITH RAF + RAMPING
+// ===================================================================
+// Implements request animation frame loop with velocity smoothing
+// for professional-grade control feel (matches sample solution)
 
+// Velocity state management
+var targetVelocity = { lx: 0, ly: 0, az: 0 };     // What user wants
+var actualVelocity = { lx: 0, ly: 0, az: 0 };     // What's currently sent (smoothed)
+var lastPublishTime = performance.now();
+
+// Acceleration limits (m/s² and rad/s²) - prevents wheel slip and jerky motion
+var MAX_LINEAR_ACCEL = 2.0;   // Linear acceleration limit
+var MAX_ANGULAR_ACCEL = 3.0;  // Angular acceleration limit
+
+// Smoothing function: ramps velocity towards target with acceleration limit
+function rampValue(current, target, maxAccel, dt) {
+    const diff = target - current;
+    const maxChange = maxAccel * dt;
+
+    if (Math.abs(diff) <= maxChange) {
+        return target;  // Close enough, snap to target
+    }
+    return current + Math.sign(diff) * maxChange;
+}
+
+// Main publish loop using requestAnimationFrame (synced with browser rendering)
+function velocityPublishLoop() {
+    const now = performance.now();
+    const dt = (now - lastPublishTime) / 1000.0;  // Convert to seconds
+    lastPublishTime = now;
+
+    // Smooth velocity ramping with acceleration limits
+    actualVelocity.lx = rampValue(actualVelocity.lx, targetVelocity.lx, MAX_LINEAR_ACCEL, dt);
+    actualVelocity.ly = rampValue(actualVelocity.ly, targetVelocity.ly, MAX_LINEAR_ACCEL, dt);
+    actualVelocity.az = rampValue(actualVelocity.az, targetVelocity.az, MAX_ANGULAR_ACCEL, dt);
+
+    // Publish smoothed velocity
+    if (cmdVel && ros && ros.isConnected) {
+        publishTwist(actualVelocity.lx, actualVelocity.ly, actualVelocity.az);
+    }
+
+    // Schedule next frame
+    requestAnimationFrame(velocityPublishLoop);
+}
+
+// Start the publish loop (called once on page load below)
+// This replaces all setInterval calls with a single RAF loop
+
+// Button binding - now just sets target velocity
 function bindBtn(id, lx, ly, az) {
     const btn = document.getElementById(id);
     if (!btn) return;
 
-    let intervalId = null;
-
-    // Mouse/Touch Down - Start continuous publishing
+    // Mouse/Touch Down - Set target velocity
     const start = (e) => {
-        e.preventDefault(); // Prevent scrolling on mobile
+        e.preventDefault();
         btn.classList.add('active');
 
-        // Send immediately
-        publishTwist(lx, ly, az);
-
-        // Then send continuously
-        intervalId = setInterval(() => {
-            publishTwist(lx, ly, az);
-        }, PUBLISH_RATE_MS);
+        // Set target velocity (ramping loop will smooth it)
+        targetVelocity.lx = lx;
+        targetVelocity.ly = ly;
+        targetVelocity.az = az;
     };
 
-    // Release - Stop publishing
+    // Release - Clear target velocity
     const end = (e) => {
         e.preventDefault();
         btn.classList.remove('active');
 
-        // Clear the interval
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
+        // Clear target (ramping will smoothly decelerate to 0)
         stop();
     };
 
     btn.addEventListener('mousedown', start);
     btn.addEventListener('mouseup', end);
-    btn.addEventListener('mouseleave', end); // If mouse leaves button
+    btn.addEventListener('mouseleave', end);
 
     btn.addEventListener('touchstart', start);
     btn.addEventListener('touchend', end);
@@ -410,7 +450,7 @@ if (stopBtn) {
     stopBtn.addEventListener('click', stop);
 }
 
-// 6. Keyboard Control
+// 6. Keyboard Control with Debouncing
 const keyMap = {
     'w': [1, 0, 0],
     's': [-1, 0, 0],
@@ -422,14 +462,18 @@ const keyMap = {
 };
 
 const keysPressed = {};
+let keyUpdateTimer = null;
 
 document.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     if (keyMap[key] && !keysPressed[key]) {
         keysPressed[key] = true;
-        updateKeyDrive();
-        // Visual feedback
-        // Could enable .active class on buttons here
+
+        // Debounce: prevent OS key repeat spam
+        if (keyUpdateTimer) clearTimeout(keyUpdateTimer);
+        keyUpdateTimer = setTimeout(() => {
+            updateKeyDrive();
+        }, 10);  // 10ms debounce
     }
 });
 
@@ -437,6 +481,9 @@ document.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
     if (keysPressed[key]) {
         keysPressed[key] = false;
+
+        // Update immediately on release for responsive stop
+        if (keyUpdateTimer) clearTimeout(keyUpdateTimer);
         updateKeyDrive();
     }
 });
@@ -453,11 +500,10 @@ function updateKeyDrive() {
     if (keysPressed['q']) az += 1;
     if (keysPressed['e']) az -= 1;
 
-    if (lx === 0 && ly === 0 && az === 0) {
-        stop();
-    } else {
-        publishTwist(lx, ly, az);
-    }
+    // Set target velocity (RAF loop will smooth it)
+    targetVelocity.lx = lx;
+    targetVelocity.ly = ly;
+    targetVelocity.az = az;
 }
 
 // === AUTOMATION ADDITIONS ===
@@ -1186,6 +1232,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize ROS topics on page load
     initializeRosTopics();
+
+    // ===================================================================
+    // START VELOCITY PUBLISH LOOP (RAF-based smooth control)
+    // ===================================================================
+    console.log('Starting smooth velocity control loop (RAF)...');
+    requestAnimationFrame(velocityPublishLoop);
 });
 
 
