@@ -386,8 +386,9 @@ function velocityPublishLoop() {
         publishTwist(actualVelocity.lx, actualVelocity.ly, actualVelocity.az);
     }
 
-    // Schedule next frame
-    requestAnimationFrame(velocityPublishLoop);
+    // Schedule next frame - Throttled to 10Hz (100ms) for hardware performance
+    // requestAnimationFrame(velocityPublishLoop); 
+    setTimeout(velocityPublishLoop, 100);
 }
 
 // Start the publish loop (called once on page load below)

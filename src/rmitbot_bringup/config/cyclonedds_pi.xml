@@ -26,7 +26,7 @@
             <ParticipantIndex>auto</ParticipantIndex>
             <Peers>
                 <!-- Replace with your PC/Laptop's IP address -->
-                <Peer address="PC_IP_ADDRESS"/>
+                <Peer address="10.247.229.216"/>
             </Peers>
         </Discovery>
         <Internal>

@@ -27,7 +27,7 @@
             <ParticipantIndex>auto</ParticipantIndex>
             <Peers>
                 <!-- Replace with your Raspberry Pi's IP address -->
-                <Peer address="PI_IP_ADDRESS"/>
+                <Peer address="172.20.10.4"/>
             </Peers>
         </Discovery>
         <Internal>
