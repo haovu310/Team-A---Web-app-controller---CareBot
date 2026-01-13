@@ -2,7 +2,7 @@
 <robot name="rmitbot" xmlns:xacro="http://www.ros.org/wiki/xacro" >
     
     <!-- Configurable serial port for ESP32 (default: /dev/ttyUSB2) -->
-    <xacro:arg name="serial_port" default="/dev/ttyUSB2"/>
+    <xacro:arg name="serial_port" default="/dev/ttyUSB0"/>
     
     <ros2_control name="RobotSystem" type="system">    
         <hardware>
