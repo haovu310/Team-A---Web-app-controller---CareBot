@@ -136,7 +136,7 @@ echo -e "    ${BLUE}•${NC} SLAM Toolbox:   $ENABLE_SLAM"
 echo -e "    ${BLUE}•${NC} Navigation:     $ENABLE_NAV"
 echo -e "    ${BLUE}•${NC} RViz:           $ENABLE_RVIZ"
 echo -e "    ${BLUE}•${NC} Web Server:     http://localhost:8000"
-echo -e "    ${BLUE}•${NC} Rosbridge:      ws://localhost:9090"
+echo -e "    ${BLUE}•${NC} Rosbridge:      ws://localhost:9091"
 echo ""
 
 # Launch PC nodes

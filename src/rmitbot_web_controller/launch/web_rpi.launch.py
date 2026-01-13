@@ -17,7 +17,7 @@ def generate_launch_description():
     - Compression enabled for bandwidth efficiency
 
     Services started:
-    - rosbridge_websocket (port 9090) - WebSocket bridge for web UI
+    - rosbridge_websocket (port 9091) - WebSocket bridge for web UI
     - camera_stream (port 8001) - MJPEG camera stream server
     - web_server (port 8000) - HTTP server for web interface
 

@@ -388,7 +388,7 @@ ros2 topic echo /joint_states
 |---------|--------------|-----|
 | Robot doesn't move | ESP32 not connected | Check `/dev/ttyUSB0` exists |
 | TF timeout errors | `enable_odom_tf: false` | Set to `true` and rebuild |
-| Web UI won't connect | Rosbridge not running | Check port 9090 is open |
+| Web UI won't connect | Rosbridge not running | Check port 9091 is open |
 | Robot moves erratically | Low battery voltage | Charge/replace battery |
 | All zeros in odometry | Serial parsing error | Check ESP32 firmware is uploaded |
 | IMU data frozen | MPU6050 not initialized | Check I2C connections, power cycle |

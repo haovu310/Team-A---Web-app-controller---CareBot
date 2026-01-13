@@ -28,7 +28,7 @@ def generate_launch_description():
             executable='rosbridge_websocket',
             name='rosbridge_websocket',
             output='screen',
-            parameters=[{'port': 9090}] 
+            parameters=[{'port': 9091}] 
         ),
         # Start python web server
         Node(

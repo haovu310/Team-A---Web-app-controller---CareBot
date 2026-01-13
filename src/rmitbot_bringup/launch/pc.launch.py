@@ -89,7 +89,7 @@ def generate_launch_description():
         name='rosbridge_websocket',
         output='screen',
         parameters=[{
-            'port': 9090,
+            'port': 9091,
             'max_message_size': 10000000,
             'unregister_timeout': 10.0,
             'fragment_timeout': 600,

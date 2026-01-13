@@ -93,7 +93,7 @@ echo -e "    ${BLUE}•${NC} SLAM:           Active (mapping enabled)"
 echo -e "    ${BLUE}•${NC} Navigation:     Nav2 stack (delayed 10s)"
 echo -e "    ${BLUE}•${NC} Localization:   EKF sensor fusion"
 echo -e "    ${BLUE}•${NC} Web Server:     http://localhost:8000"
-echo -e "    ${BLUE}•${NC} Rosbridge:      ws://localhost:9090"
+echo -e "    ${BLUE}•${NC} Rosbridge:      ws://localhost:9091"
 echo ""
 
 # Launch simulation
