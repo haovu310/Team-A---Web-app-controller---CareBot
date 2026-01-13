@@ -80,21 +80,21 @@ def generate_launch_description():
     #     os.path.join(pkg_path_description,"launch","display.launch.py"),
     # )
     
-    # # 2.3: Mapping (SLAM Toolbox)
-    # mapping = IncludeLaunchDescription(
-    #     os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
-    # )
-    
-    # # 2.4: Navigation (Nav2)
-    # navigation = IncludeLaunchDescription(
-    #     os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
-    # )
-    
-    # # Delayed Start for Navigation (Wait for Map/SLAM)
-    # navigation_delayed = TimerAction(
-    #     period = 5., 
-    #     actions=[navigation]
-    # )
+    # 2.3: Mapping (SLAM Toolbox)
+    mapping = IncludeLaunchDescription(
+        os.path.join(pkg_path_mapping,"launch","mapping.launch.py"),
+    )
+
+    # 2.4: Navigation (Nav2)
+    navigation = IncludeLaunchDescription(
+        os.path.join(pkg_path_navigation,"launch","nav.launch.py"),
+    )
+
+    # Delayed Start for Navigation (Wait for Map/SLAM)
+    navigation_delayed = TimerAction(
+        period = 5.,
+        actions=[navigation]
+    )
 
     # ==================================================================================================
     #   LAUNCH DESCRIPTION
@@ -102,7 +102,7 @@ def generate_launch_description():
     # ==================================================================================================
     return LaunchDescription([
         enable_vision_arg,
-        
+
         # --- ROBOT SECTION (Uncomment for Pi) ---
         controller,
         rplidar,
@@ -114,9 +114,9 @@ def generate_launch_description():
         # --- PC SECTION (Uncomment for Workstation) ---
         # web_pc,
         # display,
-        # mapping,            # Enable for SLAM
-        # navigation_delayed, # Enable for Nav2
-        
+        mapping,            # Enable for SLAM
+        navigation_delayed, # Enable for Nav2
+
         # Note: 'vision' can also run on PC if testing with USB webcam
-        # vision, 
+        # vision,
     ])
