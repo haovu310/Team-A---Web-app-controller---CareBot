@@ -104,8 +104,44 @@ else
     export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 fi
 
+# Kill existing ROS processes and free serial ports
+echo -e "${GREEN}[4/8]${NC} Cleaning up existing processes..."
+pkill -9 -f ros2 2>/dev/null || true
+pkill -9 -f spawner 2>/dev/null || true
+pkill -9 -f controller_manager 2>/dev/null || true
+pkill -9 -f robot_state_publisher 2>/dev/null || true
+pkill -9 -f rplidar 2>/dev/null || true
+pkill -9 -f rosbridge 2>/dev/null || true
+pkill -9 -f slam_toolbox 2>/dev/null || true
+pkill -9 -f nav2 2>/dev/null || true
+pkill -9 -f bt_navigator 2>/dev/null || true
+pkill -9 -f planner_server 2>/dev/null || true
+pkill -9 -f controller_server 2>/dev/null || true
+pkill -9 -f behavior_server 2>/dev/null || true
+pkill -9 -f camera_stream 2>/dev/null || true
+pkill -9 -f web_server 2>/dev/null || true
+sleep 1
+echo -e "    ${BLUE}✓${NC} Killed existing ROS processes"
+
+# Free serial ports
+echo -e "${GREEN}[5/8]${NC} Releasing serial ports..."
+if sudo lsof /dev/ttyUSB0 2>/dev/null | grep -v COMMAND | grep -q .; then
+    sudo lsof /dev/ttyUSB0 2>/dev/null | grep -v COMMAND | awk '{print $2}' | xargs -r sudo kill -9
+    echo -e "    ${BLUE}✓${NC} Released /dev/ttyUSB0 (ESP32)"
+else
+    echo -e "    ${BLUE}✓${NC} /dev/ttyUSB0 already free"
+fi
+
+if sudo lsof /dev/ttyUSB1 2>/dev/null | grep -v COMMAND | grep -q .; then
+    sudo lsof /dev/ttyUSB1 2>/dev/null | grep -v COMMAND | awk '{print $2}' | xargs -r sudo kill -9
+    echo -e "    ${BLUE}✓${NC} Released /dev/ttyUSB1 (RPLidar)"
+else
+    echo -e "    ${BLUE}✓${NC} /dev/ttyUSB1 already free"
+fi
+sleep 2
+
 # Check serial ports
-echo -e "${GREEN}[4/6]${NC} Checking serial ports..."
+echo -e "${GREEN}[6/8]${NC} Checking serial ports..."
 if [ -e "$SERIAL_PORT_ESP32" ]; then
     echo -e "    ${BLUE}✓${NC} ESP32 port found: $SERIAL_PORT_ESP32"
 else
@@ -121,21 +157,18 @@ else
 fi
 
 # Display configuration
-echo -e "${GREEN}[5/6]${NC} Launch configuration:"
+echo -e "${GREEN}[7/8]${NC} Launch configuration:"
 echo -e "    ${BLUE}•${NC} ESP32 Port:     $SERIAL_PORT_ESP32"
 echo -e "    ${BLUE}•${NC} LiDAR Port:     $SERIAL_PORT_LIDAR"
 echo -e "    ${BLUE}•${NC} Vision System:  $ENABLE_VISION"
 echo ""
 
 # Launch robot
-echo -e "${GREEN}[6/6]${NC} Launching robot hardware..."
+echo -e "${GREEN}[8/8]${NC} Launching robot hardware..."
 echo -e "${YELLOW}════════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-ros2 launch rmitbot_bringup robot.launch.py \
-    serial_port_esp32:=$SERIAL_PORT_ESP32 \
-    serial_port_lidar:=$SERIAL_PORT_LIDAR \
-    enable_vision:=$ENABLE_VISION
+ros2 launch rmitbot_bringup rmitbot.launch.py
 
 # This line is only reached if launch is stopped (Ctrl+C)
 echo ""
