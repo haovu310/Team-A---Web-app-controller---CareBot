@@ -27,6 +27,21 @@ def generate_launch_description():
         description='Enable camera and AprilTag vision system'
     )
     
+    # Declare launch arguments for LiDAR
+    serial_port_lidar_arg = DeclareLaunchArgument(
+        'serial_port_lidar',
+        default_value='/dev/ttyUSB1',
+        description='Serial port for LDLidar'
+    )
+    serial_port_lidar = LaunchConfiguration('serial_port_lidar')
+
+    serial_baudrate_arg = DeclareLaunchArgument(
+        'serial_baudrate',
+        default_value='115200',
+        description='Baud rate for RPLidar'
+    )
+    serial_baudrate = LaunchConfiguration('serial_baudrate')
+
     # ==================================================================================================
     #   SECTION 1: ROBOT / RASPBERRY PI
     #   Run this section on the Robot. Comment out SECTION 2 when running on the Robot.
@@ -40,7 +55,11 @@ def generate_launch_description():
     # 1.2: Lidar Sensor
     rplidar = IncludeLaunchDescription(
         os.path.join(pkg_path_mapping,"launch", "rplidar.launch.py"),
-        launch_arguments={"use_sim_time": "False", "serial_port": "/dev/ttyUSB1"}.items()
+        launch_arguments={
+            "use_sim_time": "False", 
+            "serial_port": serial_port_lidar,
+            "serial_baudrate": serial_baudrate
+        }.items()
     )
     
     # 1.3: Localization (EKF)
@@ -102,6 +121,8 @@ def generate_launch_description():
     # ==================================================================================================
     return LaunchDescription([
         enable_vision_arg,
+        serial_port_lidar_arg,
+        serial_baudrate_arg,
 
         # --- ROBOT SECTION (Uncomment for Pi) ---
         controller,
