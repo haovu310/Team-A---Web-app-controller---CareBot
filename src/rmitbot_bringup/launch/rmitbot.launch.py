@@ -114,8 +114,8 @@ def generate_launch_description():
         # --- PC SECTION (Uncomment for Workstation) ---
         # web_pc,
         # display,
-        mapping,            # Enable for SLAM
-        navigation_delayed, # Enable for Nav2
+        # mapping,            # Enable for SLAM
+        # navigation_delayed, # Enable for Nav2
 
         # Note: 'vision' can also run on PC if testing with USB webcam
         # vision,
