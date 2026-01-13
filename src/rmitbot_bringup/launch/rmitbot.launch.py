@@ -40,7 +40,7 @@ def generate_launch_description():
     # 1.2: Lidar Sensor
     rplidar = IncludeLaunchDescription(
         os.path.join(pkg_path_mapping,"launch", "rplidar.launch.py"),
-        launch_arguments={"use_sim_time": "False"}.items()
+        launch_arguments={"use_sim_time": "False", "serial_port": "/dev/ttyUSB1"}.items()
     )
     
     # 1.3: Localization (EKF)
