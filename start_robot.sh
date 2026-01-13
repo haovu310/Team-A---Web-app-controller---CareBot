@@ -93,16 +93,7 @@ else
     source install/setup.bash
 fi
 
-# Set CycloneDDS configuration for Pi
-echo -e "${GREEN}[3/6]${NC} Configuring network (CycloneDDS)..."
-if [ -f "$SCRIPT_DIR/config/cyclonedds_pi.xml" ]; then
-    export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-    export CYCLONEDDS_URI=file://$SCRIPT_DIR/config/cyclonedds_pi.xml
-    echo -e "    ${BLUE}✓${NC} Using CycloneDDS config: $SCRIPT_DIR/config/cyclonedds_pi.xml"
-else
-    echo -e "${YELLOW}    ⚠️  CycloneDDS config not found, using default${NC}"
-    export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-fi
+
 
 # Kill existing ROS processes and free serial ports
 echo -e "${GREEN}[4/8]${NC} Cleaning up existing processes..."
