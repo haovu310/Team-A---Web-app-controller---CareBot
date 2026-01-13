@@ -55,3 +55,6 @@ volatile long EncoderTick4;    // Encoder tick count for encoder 4
 double quat[4];                // Store the quaternion data
 double gyr[3];                 // Store the gyro data
 double acc[3];                 // Store the accel data
+//   double quat[4] = {0.0, 0.0, 0.0, 1.0};  // Store the quaternion data (initialized: x,y,z,w)
+//   double gyr[3] = {0.0, 0.0, 0.0};        // Store the gyro data (initialized to zero)
+//   double acc[3] = {0.0, 0.0, 0.0};        // Store the accel data (initialized to zero)
