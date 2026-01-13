@@ -8,6 +8,7 @@
         <Discovery>
             <ParticipantIndex>auto</ParticipantIndex>
             <Peers>
+                <Peer address="10.80.150.18"/>
                 <Peer address="localhost"/>
             </Peers>
         </Discovery>
