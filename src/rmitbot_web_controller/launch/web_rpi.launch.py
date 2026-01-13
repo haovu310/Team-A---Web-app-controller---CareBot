@@ -28,7 +28,7 @@ def generate_launch_description():
         http://<Pi_IP>:8000
     """
     return LaunchDescription([
-        # Start rosbridge server with optimized parameters
+        # Start rosbridge server with minimal parameters (avoid parameter conflicts)
         Node(
             package='rosbridge_server',
             executable='rosbridge_websocket',
@@ -36,17 +36,6 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'port': 9090,
-                # Performance optimizations
-                'max_message_size': 10000000,  # 10MB limit
-                'unregister_timeout': 10.0,     # Clean up stale subscriptions
-                'fragment_timeout': 600,         # Fragment assembly timeout
-                'delay_between_messages': 0,     # No artificial delay
-                'max_queue_size': 10,           # Limit queue to prevent memory buildup
-                # Compression and throttling
-                'use_compression': True,         # Enable compression for large messages
-                'authenticate': False,           # Disable auth for local network
-                # Connection management
-                'retry_startup_delay': 5.0,     # Retry delay on startup
             }]
         ),
         # Start camera stream server with FPS limit
