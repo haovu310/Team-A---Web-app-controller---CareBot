@@ -26,9 +26,10 @@ def generate_launch_description():
             output=     'screen',
             parameters=[{
                 'serial_port': serial_port,
+                'serial_baudrate': 115200,
                 'frame_id': 'laser_link',
                 'angle_compensate': True,
-                'scan_mode': 'Standard', 
+                'scan_mode': 'Sensitivity',
                 'use_sim_time': False,
             }]
         )
