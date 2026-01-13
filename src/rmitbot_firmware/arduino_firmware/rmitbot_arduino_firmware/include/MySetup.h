@@ -19,8 +19,8 @@
 #define MOT2_B 21 // Pin used on ESP32 for the MOT2_B
 #define MOT3_A 27 // Pin used on ESP32 for the MOT3_A
 #define MOT3_B 26 // Pin used on ESP32 for the MOT3_B
-#define MOT4_A 18 // Pin used on ESP32 for the MOT4_A
-#define MOT4_B 17 // Pin used on ESP32 for the MOT4_B
+#define MOT4_A 17 // Pin used on ESP32 for the MOT4_A
+#define MOT4_B 18 // Pin used on ESP32 for the MOT4_B
 
 // ==============================================
 // PWM Channel definitions for the motors
@@ -55,6 +55,7 @@ volatile long EncoderTick4;    // Encoder tick count for encoder 4
 double quat[4];                // Store the quaternion data
 double gyr[3];                 // Store the gyro data
 double acc[3];                 // Store the accel data
-//   double quat[4] = {0.0, 0.0, 0.0, 1.0};  // Store the quaternion data (initialized: x,y,z,w)
-//   double gyr[3] = {0.0, 0.0, 0.0};        // Store the gyro data (initialized to zero)
-//   double acc[3] = {0.0, 0.0, 0.0};        // Store the accel data (initialized to zero)
+//   double quat[4] = {0.0, 0.0, 0.0, 1.0};  // Store the quaternion data
+//   (initialized: x,y,z,w) double gyr[3] = {0.0, 0.0, 0.0};        // Store the
+//   gyro data (initialized to zero) double acc[3] = {0.0, 0.0, 0.0};        //
+//   Store the accel data (initialized to zero)

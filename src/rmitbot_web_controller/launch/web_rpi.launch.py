@@ -35,7 +35,7 @@ def generate_launch_description():
             name='rosbridge_websocket',
             output='screen',
             parameters=[{
-                'port': 9090,
+                'port': 9091,
             }]
         ),
         # Start camera stream server with FPS limit

@@ -7,7 +7,7 @@ def generate_launch_description():
     Starts only the web server to serve the control interface.
     
     The web interface will connect to:
-    - rosbridge_websocket on the RPi (port 9090)
+    - rosbridge_websocket on the RPi (port 9091)
     - camera_stream on the RPi (port 8001)
     
     Usage:

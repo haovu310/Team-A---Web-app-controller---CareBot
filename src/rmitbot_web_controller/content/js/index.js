@@ -31,7 +31,7 @@ var maxRetryDelay = 30000; // Max 30 seconds
 
 function createRosConnection() {
     var ros = new ROSLIB.Ros({
-        url: 'ws://' + rosHost + ':9090'
+        url: 'ws://' + rosHost + ':9091'
     });
 
     // Connection timeout handling
