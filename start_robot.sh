@@ -31,6 +31,7 @@ NC='\033[0m' # No Color
 # Default parameters
 SERIAL_PORT_ESP32="/dev/ttyUSB0"
 SERIAL_PORT_LIDAR="/dev/ttyUSB1"
+LIDAR_BAUD="115200"
 ENABLE_VISION="false"
 
 # Parse arguments
@@ -42,6 +43,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --lidar=*)
             SERIAL_PORT_LIDAR="${1#*=}"
+            shift
+            ;;
+        --lidar-baud=*)
+            LIDAR_BAUD="${1#*=}"
             shift
             ;;
         --vision)
@@ -153,6 +158,7 @@ fi
 echo -e "${GREEN}[7/8]${NC} Launch configuration:"
 echo -e "    ${BLUE}•${NC} ESP32 Port:     $SERIAL_PORT_ESP32"
 echo -e "    ${BLUE}•${NC} LiDAR Port:     $SERIAL_PORT_LIDAR"
+echo -e "    ${BLUE}•${NC} LiDAR Baud:     $LIDAR_BAUD"
 echo -e "    ${BLUE}•${NC} Vision System:  $ENABLE_VISION"
 echo ""
 
@@ -161,7 +167,7 @@ echo -e "${GREEN}[8/8]${NC} Launching robot hardware..."
 echo -e "${YELLOW}════════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-ros2 launch rmitbot_bringup rmitbot.launch.py
+ros2 launch rmitbot_bringup rmitbot.launch.py serial_port_lidar:=$SERIAL_PORT_LIDAR serial_baudrate:=$LIDAR_BAUD
 
 # This line is only reached if launch is stopped (Ctrl+C)
 echo ""
