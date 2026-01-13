@@ -27,8 +27,8 @@ def generate_launch_description():
     # Declare serial_port argument for ESP32
     serial_port_arg = DeclareLaunchArgument(
         'serial_port',
-        default_value='/dev/ttyUSB0',
-        description='Serial port for ESP32 motor controller (e.g., /dev/ttyUSB0)'
+        default_value='/dev/ttyUSB2',
+        description='Serial port for ESP32 motor controller (e.g., /dev/ttyUSB2)'
     )
     serial_port = LaunchConfiguration('serial_port')
 
