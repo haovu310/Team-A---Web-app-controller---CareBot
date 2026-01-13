@@ -38,7 +38,7 @@ void setup()
   controller2.begin(); // Initialize the controller
   controller3.begin(); // Initialize the controller
   controller4.begin(); // Initialize the controller
-  IMUBegin();          // Initialize the IMU
+  // IMUBegin();          // Initialize the IMU
 }
 
 void loop()
@@ -55,7 +55,7 @@ void loop()
   motor2.send_pwm(MOT2_cmd);   // Send the PWM command to the motor
   motor3.send_pwm(MOT3_cmd);   // Send the PWM command to the motor
   motor4.send_pwm(MOT4_cmd);   // Send the PWM command to the motor
-  IMUGetData();                // Get the data from the IMU
+  // IMUGetData();                // Get the data from the IMU
   SerialDataPrint();           // Print the data to the Serial Monitor
   SerialDataRead();            // Write the data to the Serial Monitor
 }
