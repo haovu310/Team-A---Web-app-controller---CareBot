@@ -17,8 +17,17 @@ def generate_launch_description():
     )
     serial_port = LaunchConfiguration('serial_port')
 
+    # Declare baudrate argument
+    serial_baudrate_arg = DeclareLaunchArgument(
+        'serial_baudrate',
+        default_value='115200',
+        description='Baud rate for RPLidar (e.g., 115200 or 256000)'
+    )
+    serial_baudrate = LaunchConfiguration('serial_baudrate')
+
     return LaunchDescription([
         serial_port_arg,
+        serial_baudrate_arg,
         
         Node(
             package=    'rplidar_ros',
@@ -26,7 +35,7 @@ def generate_launch_description():
             output=     'screen',
             parameters=[{
                 'serial_port': serial_port,
-                'serial_baudrate': 115200,
+                'serial_baudrate': serial_baudrate,
                 'frame_id': 'laser_link',
                 'angle_compensate': True,
                 'scan_mode': 'Sensitivity',

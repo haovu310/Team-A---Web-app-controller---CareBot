@@ -140,10 +140,11 @@ else
 fi
 sleep 2
 
-# Check serial ports
+# Check serial ports and set permissions
 echo -e "${GREEN}[6/8]${NC} Checking serial ports..."
 if [ -e "$SERIAL_PORT_ESP32" ]; then
     echo -e "    ${BLUE}✓${NC} ESP32 port found: $SERIAL_PORT_ESP32"
+    sudo chmod 666 "$SERIAL_PORT_ESP32"
 else
     echo -e "${YELLOW}    ⚠️  ESP32 port not found: $SERIAL_PORT_ESP32${NC}"
     echo -e "    Available ports:"
@@ -152,6 +153,7 @@ fi
 
 if [ -e "$SERIAL_PORT_LIDAR" ]; then
     echo -e "    ${BLUE}✓${NC} LiDAR port found: $SERIAL_PORT_LIDAR"
+    sudo chmod 666 "$SERIAL_PORT_LIDAR"
 else
     echo -e "${YELLOW}    ⚠️  LiDAR port not found: $SERIAL_PORT_LIDAR${NC}"
 fi
