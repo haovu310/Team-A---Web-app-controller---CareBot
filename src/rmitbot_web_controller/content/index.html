@@ -166,7 +166,31 @@
                 </div>
             </div>
 
-            <div class="movement-section">
+            <div class="mode-toggle">
+                <span>Manual</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-switch">
+                    <span class="slider round"></span>
+                </label>
+                <span>Auto</span>
+            </div>
+
+            <div id="map-panel" class="hidden">
+                <h2>Navigation Map</h2>
+                <div id="nav-map"></div>
+                <div class="nav-controls">
+                    <div class="nav-status">
+                        <span id="nav-status-icon">●</span>
+                        <span id="nav-status-text">Ready</span>
+                    </div>
+                    <button class="btn-cancel" id="cancel-nav">
+                        <i class="fas fa-times-circle"></i> Cancel
+                    </button>
+                </div>
+                <p class="instruction">Click on map to send goal</p>
+            </div>
+
+            <div id="manual-panel" class="movement-section">
                 <h2>Manual Drive</h2>
                 <div class="d-pad">
                     <!-- Row 1: Diagonals + Forward -->

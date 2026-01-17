@@ -51,6 +51,161 @@ header {
     color: var(--primary-dark);
 }
 
+/* Mode Switch */
+.mode-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    display: none;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: var(--primary-color);
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+/* Map Panel */
+.hidden {
+    display: none !important;
+}
+
+#nav-map {
+    width: 100%;
+    height: 400px;
+    background: #000;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+#nav-map canvas {
+    background: #222;
+}
+
+.instruction {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Navigation Controls */
+.nav-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-color);
+    border-radius: 10px;
+}
+
+.nav-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+#nav-status-icon {
+    font-size: 1.2rem;
+}
+
+#nav-status-icon.ready {
+    color: var(--text-muted);
+}
+
+#nav-status-icon.navigating {
+    color: #3498db;
+    animation: pulse 1s infinite;
+}
+
+#nav-status-icon.success {
+    color: var(--success);
+}
+
+#nav-status-icon.failed {
+    color: var(--danger);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.btn-cancel {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--danger);
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-cancel:hover {
+    background: #e55039;
+    transform: scale(1.02);
+}
+
+.btn-cancel:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Status Panel */
 .status-panel {
     display: flex;
     align-items: center;
