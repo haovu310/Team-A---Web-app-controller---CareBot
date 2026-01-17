@@ -14,8 +14,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'content'), [f for f in glob('content/*') if os.path.isfile(f)]),
-        (os.path.join('share', package_name, 'content/css'), glob('content/css/*')),
-        (os.path.join('share', package_name, 'content/js'), glob('content/js/*')),
+        (os.path.join('share', package_name, 'content/css'), [f for f in glob('content/css/*') if os.path.isfile(f)]),
+        (os.path.join('share', package_name, 'content/js'), [f for f in glob('content/js/*') if os.path.isfile(f)]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,7 +26,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'web_server = rmitbot_web_controller.web_server:main'
+            'web_server = rmitbot_web_controller.web_server:main',
+            'camera_stream = rmitbot_web_controller.camera_stream:main'
         ],
     },
 )

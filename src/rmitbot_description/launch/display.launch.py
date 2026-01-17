@@ -15,15 +15,19 @@ def generate_launch_description():
     # Path to the rviz config file
     rviz_path = os.path.join(pkg_path_description, 'rviz', 'display.rviz')
     # This node launches RViz2 with the specified configuration file
-    rviz = Node(
-        package=    'rviz2',
-        executable= 'rviz2',
-        name=       'rviz2',
-        output=     'screen',
-        arguments=[ '-d', rviz_path],
-        parameters=[{"use_sim_time": False}],
-    )
-    
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
     return LaunchDescription([
-        rviz, 
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='false',
+            description='Use sim time if true'),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen',
+            arguments=['-d', rviz_path],
+            parameters=[{'use_sim_time': use_sim_time}]
+        )
     ])

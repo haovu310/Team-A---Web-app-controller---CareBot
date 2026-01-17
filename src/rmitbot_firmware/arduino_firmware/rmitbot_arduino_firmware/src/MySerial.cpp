@@ -24,7 +24,7 @@ void SerialBegin() // Function to initialize the serial communication
 
 void SerialDataPrint() // Function to print the data to the Serial Monitor
 {
-    if (micros() - Serial_time >= 50 * 1e3)
+    if (micros() - Serial_time >= 10 * 1e3) // 10ms = 100Hz for smooth telemetry
     {
         Serial_time = micros();
         Serial.print('<');

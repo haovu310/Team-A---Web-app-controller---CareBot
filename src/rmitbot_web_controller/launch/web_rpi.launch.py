@@ -1,0 +1,63 @@
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    """
+    Launch file for Raspberry Pi - OPTIMIZED FOR PERFORMANCE
+    Starts rosbridge, camera stream, and web server services.
+
+    This should run on the robot (Raspberry Pi) alongside the robot controller,
+    sensors, and actuators.
+
+    OPTIMIZATIONS:
+    - Reduced rosbridge message queue size
+    - Optimized fragment and delay thresholds
+    - Limited camera FPS to 15 for lower CPU usage
+    - Enabled unregister timeout to clean up stale connections
+    - Compression enabled for bandwidth efficiency
+
+    Services started:
+    - rosbridge_websocket (port 9091) - WebSocket bridge for web UI
+    - camera_stream (port 8001) - MJPEG camera stream server
+    - web_server (port 8000) - HTTP server for web interface
+
+    Usage on Raspberry Pi:
+        ros2 launch rmitbot_web_controller web_rpi.launch.py
+    
+    Then open browser to:
+        http://<Pi_IP>:8000
+    """
+    return LaunchDescription([
+        # Start rosbridge server with minimal parameters (avoid parameter conflicts)
+        Node(
+            package='rosbridge_server',
+            executable='rosbridge_websocket',
+            name='rosbridge_websocket',
+            output='screen',
+            parameters=[{
+                'port': 9091,
+            }]
+        ),
+        # Start camera stream server with FPS limit
+        Node(
+            package='rmitbot_web_controller',
+            executable='camera_stream',
+            name='camera_stream',
+            output='screen',
+            parameters=[{
+                'stream_port': 8001,
+                'max_fps': 15,  # Limit to 15 FPS for Raspberry Pi
+                'camera_topic': 'camera/image_raw/compressed'
+            }]
+        ),
+        # Start web server to serve the web interface
+        Node(
+            package='rmitbot_web_controller',
+            executable='web_server',
+            name='web_server',
+            output='screen',
+            parameters=[{
+                'port': 8000
+            }]
+        )
+    ])

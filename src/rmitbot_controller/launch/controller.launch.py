@@ -12,9 +12,26 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 # ros2 launch rmitbot_controller controller.launch.py
+# ros2 launch rmitbot_controller controller.launch.py serial_port:=/dev/ttyUSB1
 
 def generate_launch_description():
     
+    # Declare use_sim_time argument
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation (Gazebo) clock if true'
+    )
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+    # Declare serial_port argument for ESP32
+    serial_port_arg = DeclareLaunchArgument(
+        'serial_port',
+        default_value='/dev/ttyUSB0',
+        description='Serial port for ESP32 motor controller (e.g., /dev/ttyUSB0)'
+    )
+    serial_port = LaunchConfiguration('serial_port')
+
     # Path to the controller config file
     pkg_path_controller =   get_package_share_directory("rmitbot_controller")
     config_controller =    os.path.join(pkg_path_controller, 'config', 'rmitbot_controller.yaml')
@@ -22,12 +39,22 @@ def generate_launch_description():
     # Path to the package
     pkg_path_description = get_package_share_directory("rmitbot_description")
     urdf_path = os.path.join(pkg_path_description, 'urdf', 'rmitbot.urdf.xacro')
-    robot_description = ParameterValue(Command(['xacro ', '\'', urdf_path, '\'']), value_type=str)
+    
+    # Pass serial_port to xacro
+    robot_description = ParameterValue(
+        Command([
+            FindExecutable(name='xacro'), ' ', urdf_path,
+            ' use_sim:=', use_sim_time,
+            ' serial_port:=', serial_port
+        ]), 
+        value_type=str
+    )
+    
     # Publish the robot static TF from the urdf
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        parameters=[{"use_sim_time": False, 
+        parameters=[{"use_sim_time": use_sim_time, 
                      "robot_description": robot_description}],
         )
     
@@ -36,7 +63,7 @@ def generate_launch_description():
         package=        "controller_manager",
         executable=     "ros2_control_node",
         parameters=[{   "robot_description": robot_description,
-                        "use_sim_time": False},
+                        "use_sim_time": use_sim_time},
                         config_controller, 
         ],
     )
@@ -55,7 +82,7 @@ def generate_launch_description():
         arguments=[
             'mecanum_drive_controller','--param-file', config_controller,
             '--controller-ros-args', '-r mecanum_drive_controller/tf_odometry:=tf',
-            '--controller-ros-args', '-r mecanum_drive_controller/reference:=cmd_vel',
+            '--controller-ros-args', '-r mecanum_drive_controller/reference:=/cmd_vel',
             '--controller-ros-args', '-r mecanum_drive_controller/odometry:=odom',
             '--controller-ros-args', '-r mecanum_drive_controller/controller_state:=controller_state',
         ],
@@ -69,29 +96,33 @@ def generate_launch_description():
             )
         )
     
-    imu_broadcaster = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=[
-            'imu_sensor_broadcaster',
-            '--param-file',
-            config_controller,
-        ],
-    )
+    # IMU Broadcaster - DISABLED (not using IMU yet)
+    # Uncomment when IMU sensor is ready to use
+    # imu_broadcaster = Node(
+    #     package="controller_manager",
+    #     executable="spawner",
+    #     arguments=[
+    #         'imu_sensor_broadcaster',
+    #         '--param-file',
+    #         config_controller,
+    #     ],
+    # )
     
-    imu_broadcaster_delayed = RegisterEventHandler(
-        event_handler=OnProcessExit(
-            target_action=controller_spawner,
-            on_exit=[imu_broadcaster],
-            )
-        )
+    # imu_broadcaster_delayed = RegisterEventHandler(
+    #     event_handler=OnProcessExit(
+    #         target_action=controller_spawner,
+    #         on_exit=[imu_broadcaster],
+    #         )
+    #     )
 
     return LaunchDescription(
         [
+            use_sim_time_arg,
+            serial_port_arg,
             robot_state_publisher, 
             controller_manager, 
             joint_state_broadcaster_spawner,
             controller_spawner_delayed,
-            imu_broadcaster_delayed, 
+            # imu_broadcaster_delayed,  # DISABLED - uncomment when IMU is ready
         ]
     )

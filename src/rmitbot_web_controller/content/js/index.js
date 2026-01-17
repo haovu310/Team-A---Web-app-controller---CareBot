@@ -1,9 +1,212 @@
-// CareBot Controller Logic
+// CareBot Controller Logic - OPTIMIZED FOR RASPBERRY PI
 
-// 1. ROS Connection
-var ros = new ROSLIB.Ros({
-    url: 'ws://' + window.location.hostname + ':9090'
-});
+// Configuration - Get RPi host from URL parameter or use default
+function getRpiHostFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const rpiParam = urlParams.get('rpi_host');
+
+    if (rpiParam) {
+        console.log('Using RPi host from URL parameter:', rpiParam);
+        return rpiParam;
+    }
+
+    // Default: assume rosbridge and camera are on same host as web page
+    // This works when:
+    // 1. Running web_server on RPi (standalone mode)
+    // 2. Running web_server on PC with proper network routing
+    const defaultHost = window.location.hostname;
+    console.log('Using default RPi host:', defaultHost);
+    return defaultHost;
+}
+
+// ROS Connection - Connect to Pi's rosbridge with retry logic
+var rpiHost = getRpiHostFromUrl(); // RPi IP or hostname
+var rosHost = rpiHost; // For backward compatibility
+
+// Connection retry configuration
+var connectionRetryCount = 0;
+var maxRetries = 10;
+var retryDelay = 2000; // Start with 2 seconds
+var maxRetryDelay = 30000; // Max 30 seconds
+
+function createRosConnection() {
+    var ros = new ROSLIB.Ros({
+        url: 'ws://' + rosHost + ':9091'
+    });
+
+    // Connection timeout handling
+    var connectionTimeout = setTimeout(function () {
+        console.warn('Connection timeout - closing and retrying...');
+        ros.close();
+    }, 10000); // 10 second timeout
+
+    ros.on('connection', function () {
+        clearTimeout(connectionTimeout);
+        console.log('Connected to websocket server.');
+        statusDot.className = 'status-dot connected';
+        statusText.innerText = 'Online';
+        connectionRetryCount = 0;
+        retryDelay = 2000; // Reset retry delay
+    });
+
+    ros.on('error', function (error) {
+        clearTimeout(connectionTimeout);
+        console.log('Error connecting: ', error);
+        statusDot.className = 'status-dot disconnected';
+        statusText.innerText = 'Error';
+        attemptReconnection();
+    });
+
+    ros.on('close', function () {
+        clearTimeout(connectionTimeout);
+        console.log('Connection closed.');
+        statusDot.className = 'status-dot disconnected';
+        statusText.innerText = 'Offline';
+        attemptReconnection();
+    });
+
+    return ros;
+}
+
+function attemptReconnection() {
+    if (connectionRetryCount < maxRetries) {
+        connectionRetryCount++;
+        console.log(`Attempting reconnection ${connectionRetryCount}/${maxRetries} in ${retryDelay / 1000}s...`);
+
+        setTimeout(function () {
+            console.log('Reconnecting...');
+            ros = createRosConnection();
+            initializeRosTopics();
+        }, retryDelay);
+
+        // Exponential backoff
+        retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
+    } else {
+        console.error('Max reconnection attempts reached. Please refresh the page.');
+        statusText.innerText = 'Disconnected';
+    }
+}
+
+var ros = createRosConnection();
+
+// === CUSTOM DIALOG SYSTEM ===
+// Beautiful styled dialogs to replace ugly browser alerts
+
+function showDialog(message, title = 'CareBot') {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-dialog');
+        const titleEl = document.getElementById('dialog-title');
+        const messageEl = document.getElementById('dialog-message');
+        const icon = document.getElementById('dialog-icon');
+        const okBtn = document.getElementById('dialog-ok');
+        const cancelBtn = document.getElementById('dialog-cancel');
+        const header = overlay.querySelector('.custom-dialog-header');
+
+        // Set content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        // Set icon based on message content
+        icon.className = 'fas';
+        header.className = 'custom-dialog-header';
+
+        if (message.includes('⚠️') || message.includes('WARNING')) {
+            icon.className += ' fa-exclamation-triangle';
+            header.classList.add('warning');
+        } else if (message.includes('❌') || message.includes('Error') || message.includes('Failed')) {
+            icon.className += ' fa-times-circle';
+            header.classList.add('error');
+        } else if (message.includes('✅') || message.includes('success')) {
+            icon.className += ' fa-check-circle';
+            header.classList.add('success');
+        } else if (message.includes('📍') || message.includes('ℹ️')) {
+            icon.className += ' fa-info-circle';
+            header.classList.add('info');
+        } else {
+            icon.className += ' fa-exclamation-circle';
+        }
+
+        // Hide cancel button for alerts
+        cancelBtn.style.display = 'none';
+
+        // Show dialog
+        overlay.style.display = 'flex';
+
+        // Handle OK click
+        const handleOk = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            resolve(true);
+        };
+
+        okBtn.addEventListener('click', handleOk);
+
+        // Handle ESC key
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                overlay.style.display = 'none';
+                document.removeEventListener('keydown', handleEsc);
+                resolve(true);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    });
+}
+
+function showConfirm(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-dialog');
+        const titleEl = document.getElementById('dialog-title');
+        const messageEl = document.getElementById('dialog-message');
+        const icon = document.getElementById('dialog-icon');
+        const okBtn = document.getElementById('dialog-ok');
+        const cancelBtn = document.getElementById('dialog-cancel');
+        const header = overlay.querySelector('.custom-dialog-header');
+
+        // Set content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        // Set icon
+        icon.className = 'fas fa-question-circle';
+        header.className = 'custom-dialog-header warning';
+
+        // Show both buttons
+        cancelBtn.style.display = 'inline-block';
+
+        // Show dialog
+        overlay.style.display = 'flex';
+
+        // Handle button clicks
+        const handleOk = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(false);
+        };
+
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+
+        // Handle ESC key
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                overlay.style.display = 'none';
+                document.removeEventListener('keydown', handleEsc);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    });
+}
+
 
 // UI Elements
 const statusDot = document.getElementById('status-dot');
@@ -11,31 +214,87 @@ const statusText = document.getElementById('connection-text');
 const speedSlider = document.getElementById('speed-slider');
 const speedDisplay = document.getElementById('speed-display');
 
-// Connection Handlers
-ros.on('connection', function () {
-    console.log('Connected to websocket server.');
-    statusDot.className = 'status-dot connected';
-    statusText.innerText = 'Online';
-});
+// Initialize ROS topics (called after connection established)
+function initializeRosTopics() {
+    // Reinitialize all topics when reconnecting
+    cmdVel = new ROSLIB.Topic({
+        ros: ros,
+        name: 'cmd_vel_keyboard',
+        messageType: 'geometry_msgs/TwistStamped'
+    });
 
-ros.on('error', function (error) {
-    console.log('Error connecting: ', error);
-    statusDot.className = 'status-dot disconnected';
-    statusText.innerText = 'Error';
-});
+    goalTopic = new ROSLIB.Topic({
+        ros: ros,
+        name: '/goal_pose',
+        messageType: 'geometry_msgs/PoseStamped'
+    });
 
-ros.on('close', function () {
-    console.log('Connection closed.');
-    statusDot.className = 'status-dot disconnected';
-    statusText.innerText = 'Offline';
-});
 
-// 2. Publisher Setup
-var cmdVel = new ROSLIB.Topic({
-    ros: ros,
-    name: '/cmd_vel',
-    messageType: 'geometry_msgs/TwistStamped'
-});
+
+    // Subscribe to Navigation Status
+    navStatusTopic = new ROSLIB.Topic({
+        ros: ros,
+        name: '/navigate_to_pose/_action/status',
+        messageType: 'action_msgs/GoalStatusArray'
+    });
+
+    navStatusTopic.subscribe(function (message) {
+        // Only react if we are actively tracking a goal
+        if (!currentGoalId) return;
+
+        // Check status of latest goal
+        // Nav2 status list usually contains all active/recent goals
+        if (message.status_list && message.status_list.length > 0) {
+            // Get the last status (most recent) - usually corresponds to our goal if we just sent it
+            const latest = message.status_list[message.status_list.length - 1];
+
+            // Status codes: 4=SUCCEEDED, 5=CANCELED, 6=ABORTED
+            if (latest.status === 4) {
+                console.log('Goal SUCCEEDED');
+                updateNavStatusText('Goal Reached! 🎉');
+                resetNavUI();
+            } else if (latest.status === 6) {
+                console.log('Goal ABORTED');
+                updateNavStatusText('Goal Failed (Aborted) ❌');
+                resetNavUI();
+            } else if (latest.status === 5) {
+                console.log('Goal CANCELED');
+                updateNavStatusText('Navigation Cancelled');
+                resetNavUI();
+            } else if (latest.status === 2) {
+                // EXECUTING
+                updateNavStatusText('Navigating...');
+            }
+        }
+    });
+
+    saveMapClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/serialize_map',
+        serviceType: 'slam_toolbox/srv/SerializePoseGraph'
+    });
+
+    loadMapClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/deserialize_map',
+        serviceType: 'slam_toolbox/srv/DeserializePoseGraph'
+    });
+
+    // Initialize Cancel Service
+    cancelGoalService = new ROSLIB.Service({
+        ros: ros,
+        name: '/navigate_to_pose/_action/cancel_goal',
+        serviceType: 'action_msgs/srv/CancelGoal'
+    });
+}
+
+// 2. Publisher Setup (will be initialized after connection)
+var cmdVel = null;
+var goalTopic = null;
+var navStatusTopic = null;
+var saveMapClient = null;
+var loadMapClient = null;
+var cancelGoalService = null;
 
 // State
 var maxLinearSpeed = 1.0; // Max speed at 100% slider
@@ -50,8 +309,13 @@ speedSlider.addEventListener('input', function (e) {
     speedDisplay.innerText = currentLinearScale.toFixed(2);
 });
 
-// 4. Movement Logic
+// 4. Movement Logic - Optimized with safety check
 function publishTwist(lx, ly, az) {
+    if (!cmdVel || !ros || !ros.isConnected) {
+        console.warn('Cannot publish: ROS not connected');
+        return;
+    }
+
     // timestamp could be 0, or current time
     var twist = new ROSLIB.Message({
         header: {
@@ -72,52 +336,92 @@ function publishTwist(lx, ly, az) {
         }
     });
     cmdVel.publish(twist);
-    console.log("Cmd:", lx, ly, az);
 }
 
 function stop() {
-    publishTwist(0, 0, 0);
+    targetVelocity.lx = 0;
+    targetVelocity.ly = 0;
+    targetVelocity.az = 0;
 }
 
-// 5. Button Bindings
-var PUBLISH_RATE_MS = 100; // Send command every 100ms while held
+// ===================================================================
+// 5. SMOOTH VELOCITY CONTROL WITH RAF + RAMPING
+// ===================================================================
+// Implements request animation frame loop with velocity smoothing
+// for professional-grade control feel (matches sample solution)
 
+// Velocity state management
+var targetVelocity = { lx: 0, ly: 0, az: 0 };     // What user wants
+var actualVelocity = { lx: 0, ly: 0, az: 0 };     // What's currently sent (smoothed)
+var lastPublishTime = performance.now();
+
+// Acceleration limits (m/s² and rad/s²) - prevents wheel slip and jerky motion
+var MAX_LINEAR_ACCEL = 2.0;   // Linear acceleration limit
+var MAX_ANGULAR_ACCEL = 3.0;  // Angular acceleration limit
+
+// Smoothing function: ramps velocity towards target with acceleration limit
+function rampValue(current, target, maxAccel, dt) {
+    const diff = target - current;
+    const maxChange = maxAccel * dt;
+
+    if (Math.abs(diff) <= maxChange) {
+        return target;  // Close enough, snap to target
+    }
+    return current + Math.sign(diff) * maxChange;
+}
+
+// Main publish loop using requestAnimationFrame (synced with browser rendering)
+function velocityPublishLoop() {
+    const now = performance.now();
+    const dt = (now - lastPublishTime) / 1000.0;  // Convert to seconds
+    lastPublishTime = now;
+
+    // Smooth velocity ramping with acceleration limits
+    actualVelocity.lx = rampValue(actualVelocity.lx, targetVelocity.lx, MAX_LINEAR_ACCEL, dt);
+    actualVelocity.ly = rampValue(actualVelocity.ly, targetVelocity.ly, MAX_LINEAR_ACCEL, dt);
+    actualVelocity.az = rampValue(actualVelocity.az, targetVelocity.az, MAX_ANGULAR_ACCEL, dt);
+
+    // Publish smoothed velocity
+    if (cmdVel && ros && ros.isConnected) {
+        publishTwist(actualVelocity.lx, actualVelocity.ly, actualVelocity.az);
+    }
+
+    // Schedule next frame - Throttled to 10Hz (100ms) for hardware performance
+    // requestAnimationFrame(velocityPublishLoop); 
+    setTimeout(velocityPublishLoop, 100);
+}
+
+// Start the publish loop (called once on page load below)
+// This replaces all setInterval calls with a single RAF loop
+
+// Button binding - now just sets target velocity
 function bindBtn(id, lx, ly, az) {
     const btn = document.getElementById(id);
     if (!btn) return;
 
-    let intervalId = null;
-
-    // Mouse/Touch Down - Start continuous publishing
+    // Mouse/Touch Down - Set target velocity
     const start = (e) => {
-        e.preventDefault(); // Prevent scrolling on mobile
+        e.preventDefault();
         btn.classList.add('active');
 
-        // Send immediately
-        publishTwist(lx, ly, az);
-
-        // Then send continuously
-        intervalId = setInterval(() => {
-            publishTwist(lx, ly, az);
-        }, PUBLISH_RATE_MS);
+        // Set target velocity (ramping loop will smooth it)
+        targetVelocity.lx = lx;
+        targetVelocity.ly = ly;
+        targetVelocity.az = az;
     };
 
-    // Release - Stop publishing
+    // Release - Clear target velocity
     const end = (e) => {
         e.preventDefault();
         btn.classList.remove('active');
 
-        // Clear the interval
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
+        // Clear target (ramping will smoothly decelerate to 0)
         stop();
     };
 
     btn.addEventListener('mousedown', start);
     btn.addEventListener('mouseup', end);
-    btn.addEventListener('mouseleave', end); // If mouse leaves button
+    btn.addEventListener('mouseleave', end);
 
     btn.addEventListener('touchstart', start);
     btn.addEventListener('touchend', end);
@@ -136,8 +440,8 @@ bindBtn('diag_back_left', -1, 1, 0);  // Backward-Left
 bindBtn('diag_back_right', -1, -1, 0); // Backward-Right
 
 // Rotate (Spin)
-bindBtn('rotateL', 0, 0, 1);
-bindBtn('rotateR', 0, 0, -1);
+bindBtn('spin_left', 0, 0, 1);
+bindBtn('spin_right', 0, 0, -1);
 
 // Stop Button (Action on click)
 const stopBtn = document.getElementById('stop');
@@ -147,7 +451,7 @@ if (stopBtn) {
     stopBtn.addEventListener('click', stop);
 }
 
-// 6. Keyboard Control
+// 6. Keyboard Control with Debouncing
 const keyMap = {
     'w': [1, 0, 0],
     's': [-1, 0, 0],
@@ -159,14 +463,18 @@ const keyMap = {
 };
 
 const keysPressed = {};
+let keyUpdateTimer = null;
 
 document.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     if (keyMap[key] && !keysPressed[key]) {
         keysPressed[key] = true;
-        updateKeyDrive();
-        // Visual feedback
-        // Could enable .active class on buttons here
+
+        // Debounce: prevent OS key repeat spam
+        if (keyUpdateTimer) clearTimeout(keyUpdateTimer);
+        keyUpdateTimer = setTimeout(() => {
+            updateKeyDrive();
+        }, 10);  // 10ms debounce
     }
 });
 
@@ -174,6 +482,9 @@ document.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
     if (keysPressed[key]) {
         keysPressed[key] = false;
+
+        // Update immediately on release for responsive stop
+        if (keyUpdateTimer) clearTimeout(keyUpdateTimer);
         updateKeyDrive();
     }
 });
@@ -190,263 +501,1100 @@ function updateKeyDrive() {
     if (keysPressed['q']) az += 1;
     if (keysPressed['e']) az -= 1;
 
-    if (lx === 0 && ly === 0 && az === 0) {
-        stop();
+    // Set target velocity (RAF loop will smooth it)
+    targetVelocity.lx = lx;
+    targetVelocity.ly = ly;
+    targetVelocity.az = az;
+}
+
+// === AUTOMATION ADDITIONS ===
+
+// 7. Mode State Management
+var currentMode = 'IDLE'; // 'IDLE', 'MANUAL', 'AUTO'
+var currentLoadedMap = null; // Track currently loaded map name
+var savedMaps = []; // List of saved maps
+var isMappingActive = false; // Track if user is actively building a map in MANUAL mode
+var hasUnsavedMapChanges = false; // Track if map has been modified without saving
+var isMapLoadedForNav = false; // Track if a map has been loaded for navigation in AUTO mode
+
+// Nav2 Navigation - Use topic-based approach for ROS2 compatibility (initialized later)
+// var goalTopic will be created in initializeRosTopics()
+
+// Current navigation goal handle
+var currentGoalId = null;
+
+// Simple check - will show status when first goal is sent
+console.log('Navigation topic initialized: /goal_pose');
+
+// Fetch saved maps from backend
+function fetchSavedMaps() {
+    // Call ROS service to get list of saved maps
+    // For now, we'll use a simple HTTP endpoint to list files in ~/.ros/
+    fetch('/list_maps')
+        .then(response => response.json())
+        .then(data => {
+            savedMaps = data.maps || [];
+            updateMapsList();
+        })
+        .catch(error => {
+            console.error('Error fetching maps:', error);
+            // Fallback: just show empty list
+            savedMaps = [];
+            updateMapsList();
+        });
+}
+
+// Update the maps list UI
+function updateMapsList() {
+    // Update both AUTO and IDLE mode lists
+    updateMapsListForMode('maps-list', 'no-maps-message', true); // AUTO mode - with launch button
+    updateMapsListForMode('maps-list-idle', 'no-maps-message-idle', false); // IDLE mode - read only
+}
+
+function updateMapsListForMode(listId, noMapsId, showLaunchButton) {
+    const mapsList = document.getElementById(listId);
+    const noMapsMessage = document.getElementById(noMapsId);
+
+    if (savedMaps.length === 0) {
+        noMapsMessage.style.display = 'block';
+        mapsList.innerHTML = '';
+        return;
+    }
+
+    noMapsMessage.style.display = 'none';
+    mapsList.innerHTML = '';
+
+    savedMaps.forEach(mapName => {
+        const mapItem = document.createElement('div');
+        mapItem.className = 'map-item';
+        if (currentLoadedMap === mapName) {
+            mapItem.classList.add('selected');
+        }
+
+        const mapNameSpan = document.createElement('span');
+        mapNameSpan.className = 'map-item-name';
+        mapNameSpan.innerHTML = `<i class="fas fa-map"></i> ${mapName}`;
+        mapItem.appendChild(mapNameSpan);
+
+        if (showLaunchButton) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'map-item-actions';
+
+            const launchBtn = document.createElement('button');
+            launchBtn.className = 'btn-launch-map';
+            launchBtn.innerHTML = '<i class="fas fa-play"></i> Launch';
+            launchBtn.onclick = (e) => {
+                e.stopPropagation();
+                loadAndLaunchMap(mapName);
+            };
+            actionsDiv.appendChild(launchBtn);
+
+            mapItem.appendChild(actionsDiv);
+        }
+
+        mapItem.onclick = () => {
+            // Just highlight selection
+            document.querySelectorAll(`#${listId} .map-item`).forEach(item => {
+                item.classList.remove('selected');
+            });
+            mapItem.classList.add('selected');
+        };
+
+        mapsList.appendChild(mapItem);
+    });
+}
+
+// Load and launch a map
+function loadAndLaunchMap(mapName) {
+    console.log('Loading map:', mapName);
+
+    // Since we're in mapping mode, we don't actually need to load a map
+    // The SLAM toolbox is already publishing the live map
+    // Just mark it as "loaded" for UI purposes
+
+    var statusSpan = document.getElementById('load-map-status');
+    if (!statusSpan) {
+        statusSpan = document.createElement('span');
+        statusSpan.id = 'temp-load-status';
+        statusSpan.style.cssText = 'position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000;';
+        document.body.appendChild(statusSpan);
+    }
+
+    statusSpan.innerText = "Map already active (live SLAM)";
+    statusSpan.style.display = 'block';
+    statusSpan.style.color = "var(--success)";
+
+    currentLoadedMap = mapName;
+
+    // Hide placeholder
+    const placeholder = document.getElementById('map-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
+
+    // Update list to show selected map
+    updateMapsList();
+
+    setTimeout(() => {
+        if (statusSpan.id === 'temp-load-status') {
+            statusSpan.remove();
+        } else {
+            statusSpan.innerText = "";
+        }
+    }, 3000);
+}
+
+// Mode switching functions
+async function setMode(mode) {
+    // Validation: Check if switching from MANUAL with unsaved mapping
+    if (currentMode === 'MANUAL' && mode !== 'MANUAL' && (isMappingActive || hasUnsavedMapChanges)) {
+        const confirmSwitch = await showConfirm(
+            '⚠️ WARNING: You have an active mapping session!\n\n' +
+            'Switching modes will lose any unsaved map data.\n\n' +
+            'Would you like to:\n' +
+            '• Click "Cancel" to stay in MANUAL mode and save your map\n' +
+            '• Click "OK" to discard changes and switch modes',
+            'Unsaved Changes'
+        );
+
+        if (!confirmSwitch) {
+            // User wants to stay and save - revert mode selection
+            updateModeUI(); // Refresh UI to show current mode
+
+            // Show save section and highlight it
+            const saveSection = document.getElementById('save-map-section');
+            if (saveSection) {
+                saveSection.style.animation = 'pulse 1s ease-in-out 3';
+                setTimeout(() => {
+                    saveSection.style.animation = '';
+                }, 3000);
+            }
+            return; // Don't switch modes
+        }
+
+        // User confirmed - reset mapping state
+        isMappingActive = false;
+        hasUnsavedMapChanges = false;
+    }
+
+    // Validation: Check if exiting AUTO mode
+    if (currentMode === 'AUTO' && mode !== 'AUTO') {
+        const confirmExit = await showConfirm(
+            '⚠️ Exit Navigation Mode?\n\n' +
+            'Are you sure you want to exit AUTO mode?\n\n' +
+            'This will UNLOAD the current map and stop navigation.\n' +
+            'You will need to reload a map to navigate again.',
+            'Exit Navigation'
+        );
+
+        if (!confirmExit) {
+            updateModeUI(); // Revert UI check
+            return; // Stay in AUTO mode
+        }
+
+        // Confirmed exit - Reset navigation state
+        isMapLoadedForNav = false;
+        currentLoadedMap = null;
+        clearMapVisualization(); // Clear the map visual
+    }
+
+    // Validation: Check if entering AUTO mode without a loaded map
+    if (mode === 'AUTO' && !isMapLoadedForNav) {
+        // Allow mode switch but show warning
+        setTimeout(() => {
+            showDialog(
+                '📍 Navigation Mode Activated\n\n' +
+                'Before you can navigate, you need to load a saved map:\n\n' +
+                '1. Click "Manage Maps" button below\n' +
+                '2. Select a map from the list\n' +
+                '3. Click "Load" to activate it\n\n' +
+                'Once loaded, you can set navigation goals!',
+                'AUTO Mode'
+            );
+        }, 500);
+    }
+
+    currentMode = mode;
+    updateModeUI();
+
+    // Show/hide relevant sections
+    if (mode === 'AUTO') {
+        document.getElementById('auto-map-section').style.display = 'block';
+        document.getElementById('custom-goal-section').style.display = 'block';
+        document.getElementById('nav-status').style.display = 'block';
+        document.getElementById('user-manual-section').style.display = 'none';
+
+        // Hide manual movement controls in Auto
+        document.querySelector('.movement-section').style.display = 'none';
+        document.querySelector('.speed-section').style.display = 'none';
+        document.getElementById('save-map-section').style.display = 'none';
+
+        // Clear the map - it might be loading or already loaded
+        // The gridClient will handle map updates from the /map topic
+        if (!isMapLoadedForNav) {
+            clearMapVisualization();
+        }
+
+        // PAUSE SLAM Mapping in AUTO mode to prevent "Stacked Map" artifacts
+        // We want localization (AMCL/Graph matching) but NOT new nodes added to the map
+        toggleSlamMapping(true);
+
+    } else if (mode === 'MANUAL') {
+        document.getElementById('auto-map-section').style.display = 'none';
+        document.getElementById('custom-goal-section').style.display = 'none';
+        document.getElementById('nav-status').style.display = 'none';
+        document.getElementById('user-manual-section').style.display = 'none';
+
+        // Enable manual movement in MANUAL mode
+        document.querySelector('.movement-section').style.display = 'block';
+        document.querySelector('.movement-section').style.opacity = '1';
+        document.querySelector('.movement-section').style.pointerEvents = 'auto';
+
+        document.querySelector('.speed-section').style.display = 'block';
+        document.querySelector('.speed-section').style.opacity = '1';
+        document.querySelector('.speed-section').style.pointerEvents = 'auto';
+
+        // Show save map section in MANUAL mode
+        document.getElementById('save-map-section').style.display = 'block';
+
+        // Start mapping session
+        isMappingActive = true;
+        isMappingActive = true;
+        isMapLoadedForNav = false; // Clear navigation map flag
+
+        // Clear any previous map visualization to start fresh for SLAM
+        console.log('Entering MANUAL mode: Clearing map visualization for SLAM');
+        clearMapVisualization();
+
+        // Re-initialize map to create fresh SLAM grid client
+        // Increase delay to 500ms to ensure backend node switch is clean and topics are ready
+        setTimeout(initMap, 500);
+
+        // RESUME SLAM Mapping in MANUAL mode
+        toggleSlamMapping(false);
+
+        // Show instruction dialog
+        setTimeout(() => {
+            showDialog(
+                '🗺️ SLAM Mapping Active\n\n' +
+                'The current environment is being scanned.\n\n' +
+                'Please drive the robot around to expand the map!',
+                'Mapping Started'
+            );
+        }, 800);
+
     } else {
-        publishTwist(lx, ly, az);
+        // IDLE: Show manual only
+        document.getElementById('auto-map-section').style.display = 'none';
+        document.getElementById('custom-goal-section').style.display = 'none';
+        document.getElementById('nav-status').style.display = 'none';
+        document.getElementById('user-manual-section').style.display = 'block';
+
+        // HIDE speed and movement controls in IDLE
+        document.querySelector('.movement-section').style.display = 'none';
+        document.querySelector('.speed-section').style.display = 'none';
+        document.getElementById('save-map-section').style.display = 'none';
+
+        // Reset mapping state
+        isMappingActive = false;
+        hasUnsavedMapChanges = false;
+        isMapLoadedForNav = false;
+
+        // Ensure map is cleared in IDLE mode (startup state)
+        clearMapVisualization();
+    }
+
+    // Cancel any ongoing navigation when leaving AUTO mode
+    if (mode !== 'AUTO' && currentGoalId) {
+        cancelNavigation();
     }
 }
 
-// ==========================
-// 7. Navigation & Map Logic
-// ==========================
+// Helper to Pause/Resume SLAM Mapping
+// shouldPause: true = stop updating map (Auto mode), false = resume mapping (Manual mode)
+function toggleSlamMapping(shouldPause) {
+    if (!ros) return;
+
+    var pauseClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/slam_toolbox/pause_new_measurements',
+        serviceType: 'slam_toolbox/srv/Pause'
+    });
+
+    var request = new ROSLIB.ServiceRequest({
+        pause: shouldPause
+    });
+
+    pauseClient.callService(request, function (result) {
+        console.log(`SLAM Mapping ${shouldPause ? 'PAUSED' : 'RESUMED'}:`, result);
+    }, function (error) {
+        console.warn(`Failed to ${shouldPause ? 'pause' : 'resume'} SLAM mapping:`, error);
+    });
+}
+
+// Send navigation goal to Nav2
+function sendNavGoal(x, y, yaw) {
+    if (currentMode !== 'AUTO') {
+        showDialog('⚠️ Navigation Unavailable\n\nPlease switch to AUTO mode to navigate.', 'Navigation Unavailable');
+        return;
+    }
+
+    if (!isMapLoadedForNav) {
+        showDialog('⚠️ No Map Loaded\n\nYou must load a saved map before navigating.\n\nClick "Manage Maps" to load a map.', 'No Map Loaded');
+        // Highlight the manage maps button
+        const manageMapsBtn = document.getElementById('btn-manage-maps-auto');
+        if (manageMapsBtn) {
+            manageMapsBtn.style.animation = 'pulse 1s ease-in-out 3';
+            setTimeout(() => {
+                manageMapsBtn.style.animation = '';
+            }, 3000);
+        }
+        return;
+    }
+
+    if (!goalTopic || !ros || !ros.isConnected) {
+        showDialog('ROS connection not available. Please wait for connection.', 'Connection Error');
+        return;
+    }
+
+    // Convert yaw to quaternion (simple 2D rotation around Z)
+    var qz = Math.sin(yaw / 2);
+    var qw = Math.cos(yaw / 2);
+
+    // Create PoseStamped message
+    var goalMessage = new ROSLIB.Message({
+        header: {
+            frame_id: 'map',
+            stamp: { sec: 0, nanosec: 0 }
+        },
+        pose: {
+            position: { x: x, y: y, z: 0.0 },
+            orientation: { x: 0.0, y: 0.0, z: qz, w: qw }
+        }
+    });
+
+    console.log('Sending navigation goal:', 'x=' + x + ', y=' + y + ', yaw=' + yaw);
+
+    goalTopic.publish(goalMessage);
+
+    currentGoalId = 'goal_' + Date.now();
+    updateNavStatusText('Goal sent to Nav2...');
+    document.getElementById('cancel-nav').style.display = 'block';
+
+    // Removed fixed 30s timeout - now using real-time feedback from action status
+}
+
+function resetNavUI() {
+    currentGoalId = null;
+    document.getElementById('cancel-nav').style.display = 'none';
+    document.getElementById('nav-progress').style.width = '0%';
+}
+
+// Cancel ongoing navigation
+function cancelNavigation() {
+    console.log('Cancelling navigation...');
+
+    // ROS2 Action Cancel: Send empty goal_info to cancel all goals
+    var request = new ROSLIB.ServiceRequest({
+        goal_info: {
+            goal_id: {
+                uuid: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // Zero UUID = Cancel All
+            },
+            stamp: { sec: 0, nanosec: 0 }
+        }
+    });
+
+    cancelGoalService.callService(request, function (result) {
+        console.log('Cancel result:', result);
+        // Result code 0 = ERROR, 1 = NONE, 2 = UNKNOWN_GOAL, 3 = GOAL_CANCELLED
+        updateNavStatusText('Navigation Cancelled');
+        resetNavUI();
+    }, function (error) {
+        console.error('Failed to cancel navigation:', error);
+        // Even if it fails, reset UI so user isn't stuck
+        updateNavStatusText('Cancel Failed (Check Logic)');
+        setTimeout(resetNavUI, 1000);
+    });
+}
+
+// Update progress display
+
+
+// UI update helpers
+function updateModeUI() {
+    var modeVal = document.getElementById('mode-value');
+    modeVal.innerText = currentMode;
+
+    // Classes for badge
+    modeVal.className = 'mode-value mode-' + currentMode.toLowerCase();
+
+    // Toggle active buttons
+    document.querySelectorAll('.btn-mode').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('mode-' + currentMode.toLowerCase()).classList.add('active');
+}
+
+function updateNavStatusText(text) {
+    document.getElementById('nav-status-text').innerText = text;
+}
+
+// Event bindings for mode buttons
+document.getElementById('mode-idle').addEventListener('click', () => setMode('IDLE'));
+document.getElementById('mode-manual').addEventListener('click', () => setMode('MANUAL'));
+document.getElementById('mode-auto').addEventListener('click', () => setMode('AUTO'));
+
+// Event binding for cancel button
+document.getElementById('cancel-nav').addEventListener('click', cancelNavigation);
+
+// Bind waypoint buttons
+document.querySelectorAll('.btn-waypoint').forEach(btn => {
+    btn.addEventListener('click', function () {
+        var x = parseFloat(this.dataset.x);
+        var y = parseFloat(this.dataset.y);
+        var yaw = parseFloat(this.dataset.yaw);
+        sendNavGoal(x, y, yaw);
+    });
+});
+
+// Bind Custom Goal Button
+document.getElementById('btn-go-goal').addEventListener('click', function () {
+    var x = parseFloat(document.getElementById('goal-x').value) || 0;
+    var y = parseFloat(document.getElementById('goal-y').value) || 0;
+    var yaw = parseFloat(document.getElementById('goal-yaw').value) || 0;
+    sendNavGoal(x, y, yaw);
+});
+
+// Initialize in IDLE mode
+setMode('IDLE');
+
+// === MAP VISUALIZATION ===
 var viewer = null;
 var gridClient = null;
-var robotMarker = null;
-var goalTopic = null;
-var isNavigating = false;
+var laserScanClient = null;
+var tfTopic = null;
+var robotPose = { x: 0, y: 0, rotation: 0 };
+var odomPose = { x: 0, y: 0, rotation: 0 };
+var mapCorrection = { x: 0, y: 0, rotation: 0 };
 
-// Status UI Elements
-const navStatusIcon = document.getElementById('nav-status-icon');
-const navStatusText = document.getElementById('nav-status-text');
-const cancelBtn = document.getElementById('cancel-nav');
-
-function setNavStatus(status, message) {
-    if (!navStatusIcon || !navStatusText) return;
-
-    navStatusIcon.className = ''; // Reset classes
-    switch (status) {
-        case 'ready':
-            navStatusIcon.classList.add('ready');
-            navStatusIcon.innerText = '●';
-            break;
-        case 'navigating':
-            navStatusIcon.classList.add('navigating');
-            navStatusIcon.innerText = '◉';
-            isNavigating = true;
-            break;
-        case 'success':
-            navStatusIcon.classList.add('success');
-            navStatusIcon.innerText = '✓';
-            isNavigating = false;
-            break;
-        case 'failed':
-            navStatusIcon.classList.add('failed');
-            navStatusIcon.innerText = '✗';
-            isNavigating = false;
-            break;
+// Clear map visualization
+function clearMapVisualization() {
+    // Show placeholder
+    const placeholder = document.getElementById('map-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'flex';
+        placeholder.innerHTML = `
+            <i class="fas fa-map-marked-alt" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+            <p>No map loaded. Click "Manage Maps" to load a saved map.</p>
+        `;
     }
-    navStatusText.innerText = message || status;
+
+    // Clear viewer if it exists
+    if (viewer && viewer.scene) {
+        viewer.scene.removeAllChildren();
+    }
+
+    // Properly unsubscribe listeners to prevent "zombie" connections
+    if (tfTopic) {
+        try {
+            tfTopic.unsubscribe();
+            console.log('Unsubscribed from TF topic');
+        } catch (e) {
+            console.warn('Error unsubscribing TF topic:', e);
+        }
+        tfTopic = null;
+    }
+
+    if (gridClient) {
+        // Try to unsubscribe internal topic if exposed
+        // Note: Different versions of ros2djs expose the topic differently
+        // commonly 'rosTopic' or just via garbage collection if we are lucky,
+        // but explicit unsubscribe is safer if possible.
+        if (gridClient.rosTopic) {
+            try {
+                gridClient.rosTopic.unsubscribe();
+                console.log('Unsubscribed from grid client topic');
+            } catch (e) {
+                console.warn('Error unsubscribing grid client:', e);
+            }
+        }
+        gridClient = null;
+    }
+
+    console.log('Map visualization cleared and listeners reset');
+}
+
+// Helper function to fit map to viewer (Issue 4)
+function fitMapToViewer() {
+    if (!viewer || !gridClient || !gridClient.currentGrid || !gridClient.currentGrid.pose) {
+        console.warn('Cannot fit map: viewer or grid not ready');
+        return;
+    }
+
+    const grid = gridClient.currentGrid;
+
+    // Scale to fit the map dimensions
+    viewer.scaleToDimensions(grid.width, grid.height);
+
+    // Center the map by shifting to its origin
+    // Check if pose and position exist before accessing
+    if (grid.pose && grid.pose.position) {
+        viewer.shift(grid.pose.position.x, grid.pose.position.y);
+
+        console.log('Map fitted to viewer:', {
+            width: grid.width,
+            height: grid.height,
+            origin: grid.pose.position
+        });
+    } else {
+        // Fallback or just scale
+        console.log('Map scaled to dimensions (no pose data available yet):', {
+            width: grid.width,
+            height: grid.height
+        });
+    }
 }
 
 function initMap() {
-    if (viewer) return; // Already init
+    // Create the viewer
+    // We assume the map-canvas div is present
+    // We get dimensions from the wrapper
+    const mapDiv = document.getElementById('map-canvas');
+    const width = mapDiv.clientWidth;
+    const height = mapDiv.clientHeight;
 
-    // Create the main viewer.
-    viewer = new ROS2D.Viewer({
-        divID: 'nav-map',
-        width: 400,
-        height: 400
-    });
+    if (!viewer) {
+        viewer = new ROS2D.Viewer({
+            divID: 'map-canvas',
+            width: width,
+            height: height,
+            background: '#efefef' // matches css background roughly
+        });
 
-    // Setup the map client.
-    gridClient = new ROS2D.OccupancyGridClient({
-        ros: ros,
-        rootObject: viewer.scene,
-        continuous: true // Track map updates
-    });
+        // Add click handler for 2D Goal Pose in AUTO mode
+        viewer.scene.addEventListener('stagemousedown', function (event) {
+            if (currentMode === 'AUTO') {
+                // Convert screen coordinates to map coordinates
+                var mousePos = viewer.scene.globalToRos(event.stageX, event.stageY);
+                console.log('Map clicked at:', mousePos);
 
-    // Scale the viewer to fit the map
-    gridClient.on('change', function () {
-        viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
-        viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
-    });
+                // Send navigation goal (with default yaw of 0)
+                sendNavGoal(mousePos.x, mousePos.y, 0);
+            }
+        });
+    }
 
-    // Setup Goal Publisher
-    goalTopic = new ROSLIB.Topic({
-        ros: ros,
-        name: '/goal_pose',
-        messageType: 'geometry_msgs/PoseStamped'
-    });
+    // Setup the map client
+    // Issue 5: Don't initialize map client in IDLE mode (keep blank)
+    if (currentMode === 'IDLE') {
+        return;
+    }
 
-    // Subscribe to robot pose (TF)
-    var tfClient = new ROSLIB.TFClient({
-        ros: ros,
-        angularThres: 0.01,
-        transThres: 0.01,
-        rate: 10.0,
-        fixedFrame: 'map'
-    });
+    if (!gridClient) {
+        gridClient = new ROS2D.OccupancyGridClient({
+            ros: ros,
+            rootObject: viewer.scene,
+            continuous: true, // track map updates
+            topic: '/map'
+        });
 
-    // Create robot marker (arrow shape)
-    robotMarker = new ROS2D.NavigationArrow({
-        size: 0.5,
-        strokeSize: 0.05,
-        fillColor: createjs.Graphics.getRGB(255, 105, 180, 0.9), // Pink
-        pulse: false
-    });
-    robotMarker.visible = false;
-    viewer.scene.addChild(robotMarker);
+        // Scale the viewer to fit map when it loads or updates
+        gridClient.on('change', function () {
+            console.log('Map update received!'); // Debug log
 
-    // Update robot marker position from TF
-    tfClient.subscribe('base_footprint', function (tf) {
-        robotMarker.visible = true;
-        robotMarker.x = tf.translation.x;
-        robotMarker.y = -tf.translation.y; // ROS2D uses inverted Y
+            // Issue 4: Auto-fit the map to the viewer
+            fitMapToViewer();
 
-        // Convert quaternion to angle
-        var q = tf.rotation;
-        var angle = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
-        robotMarker.rotation = -angle * 180 / Math.PI;
-    });
+            // Hide placeholder when map loads
+            const placeholder = document.getElementById('map-placeholder');
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
 
-    // ========================================
-    // Goal Setting with Drag-to-Orient
-    // ========================================
-    var goalMarker = null;
-    var isSettingGoal = false;
-    var goalStartCoords = null;
+            // Track unsaved changes if in MANUAL mode
+            if (currentMode === 'MANUAL' && isMappingActive) {
+                hasUnsavedMapChanges = true;
+            }
+        });
+    }
 
-    // Helper: Convert yaw angle to quaternion
-    function yawToQuaternion(yaw) {
-        return {
-            x: 0,
-            y: 0,
-            z: Math.sin(yaw / 2),
-            w: Math.cos(yaw / 2)
+    // Add LaserScan visualization
+    // Note: ROS2D v0.9.0 doesn't include LaserScanClient
+    // Uncomment if you upgrade to a version that supports it
+    // if (!laserScanClient) {
+    //     laserScanClient = new ROS2D.LaserScanClient({
+    //         ros: ros,
+    //         rootObject: viewer.scene,
+    //         topic: '/scan',
+    //         pointRatio: 2,
+    //         messageRatio: 1,
+    //         max_points: 500
+    //     });
+    // }
+
+    // Add robot pose visualization using raw TF topic (fallback)
+    if (!tfTopic) {
+        // Create a shape for the robot
+        var robotMarker = new createjs.Shape();
+        robotMarker.graphics.beginFill('#FF69B4').drawCircle(0, 0, 0.2); // 0.2m radius pink circle
+        robotMarker.graphics.beginFill('#FF1493').moveTo(0, 0).lineTo(0.3, 0.1).lineTo(0.3, -0.1).closePath(); // Direction arrow
+        viewer.scene.addChild(robotMarker);
+
+        // Subscribe to /tf to get transforms manually
+        tfTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: '/tf',
+            messageType: 'tf2_msgs/TFMessage'
+        });
+
+        tfTopic.subscribe(function (message) {
+            // Process transforms
+            // We look for 'odom' -> 'base_link' (movement) AND 'map' -> 'odom' (correction)
+            if (message.transforms) {
+                message.transforms.forEach(function (t) {
+                    var r = t.transform.rotation;
+                    var yaw = Math.atan2(2.0 * (r.w * r.z + r.x * r.y), 1.0 - 2.0 * (r.y * r.y + r.z * r.z));
+                    var tx = t.transform.translation.x;
+                    var ty = t.transform.translation.y;
+
+                    if (t.child_frame_id === 'base_link' || t.child_frame_id === 'base_footprint') {
+                        // Found odom -> base_link
+                        odomPose.x = tx;
+                        odomPose.y = ty;
+                        odomPose.rotation = yaw;
+                    } else if (t.child_frame_id === 'odom') {
+                        // Found map -> odom (AMCL correction)
+                        mapCorrection.x = tx;
+                        mapCorrection.y = ty;
+                        mapCorrection.rotation = yaw;
+                    }
+                });
+
+                // Estimate global pose: Simplified composition
+                // Ideally this requires full matrix multiplication, but for 2D visual:
+                // Global X approx = Correction X + (Odom X rotated by Correction Yaw)
+                // This is a naive approximation but better than raw odom
+                var cosC = Math.cos(mapCorrection.rotation);
+                var sinC = Math.sin(mapCorrection.rotation);
+
+                var globalX = mapCorrection.x + (odomPose.x * cosC - odomPose.y * sinC);
+                var globalY = mapCorrection.y + (odomPose.x * sinC + odomPose.y * cosC);
+                var globalYaw = mapCorrection.rotation + odomPose.rotation;
+
+                // Update Marker
+                // The viewer scene is scaled to meters by ROS2D, so we use global coordinates directly.
+                // Note: ROS2D Viewer usually handles the coordinate system (meters).
+                // We trust globalX/globalY (calculated from Odom + Map correction).
+
+                robotMarker.x = globalX;
+                robotMarker.y = globalY;
+
+                robotMarker.rotation = -globalYaw * 180 / Math.PI; // Invert rotation for Canvas? Let's check visual.
+                // Actually, standard ROS2D usually matches rotation if coordinates are aligned.
+                // Let's stick to standard rotation first:
+                robotMarker.rotation = -globalYaw * 180 / Math.PI; // ROS is CCW, Canvas is CW usually? 
+                // Wait, standard CreateJS rotation is CW. ROS is CCW.
+                // So yes, negate the angle.
+
+                // Keep marker on top
+                if (viewer.scene.getChildIndex(robotMarker) !== viewer.scene.numChildren - 1) {
+                    viewer.scene.setChildIndex(robotMarker, viewer.scene.numChildren - 1);
+                }
+            }
+        });
+    }
+}
+
+// Hook into connection - reinitialize topics and map on connection
+ros.on('connection', function () {
+    initializeRosTopics();
+    setTimeout(initMap, 1000); // Small delay to ensure DOM is ready/stable
+});
+
+// Initialize camera stream URL on page load with error handling
+document.addEventListener('DOMContentLoaded', function () {
+    const streamingImg = document.getElementById('streaming');
+    if (streamingImg) {
+        const cameraUrl = 'http://' + rpiHost + ':8001/camera/stream';
+        streamingImg.src = cameraUrl;
+        console.log('Camera stream URL set to:', cameraUrl);
+
+        // Add error handler for camera stream
+        streamingImg.onerror = function () {
+            console.error('Camera stream failed to load. Retrying in 5s...');
+            setTimeout(function () {
+                streamingImg.src = cameraUrl + '?t=' + Date.now(); // Cache bust
+            }, 5000);
+        };
+
+        // Add load handler
+        streamingImg.onload = function () {
+            console.log('Camera stream connected successfully');
         };
     }
 
-    // Create goal marker (green arrow)
-    goalMarker = new ROS2D.NavigationArrow({
-        size: 0.6,
-        strokeSize: 0.08,
-        fillColor: createjs.Graphics.getRGB(46, 204, 113, 0.9), // Green
-        pulse: false
-    });
-    goalMarker.visible = false;
-    viewer.scene.addChild(goalMarker);
+    // Initialize ROS topics on page load
+    initializeRosTopics();
 
-    // Mouse/Touch Down - Start goal placement
-    viewer.scene.addEventListener('stagemousedown', function (event) {
-        if (!document.getElementById('mode-switch').checked) return;
+    // ===================================================================
+    // START VELOCITY PUBLISH LOOP (RAF-based smooth control)
+    // ===================================================================
+    console.log('Starting smooth velocity control loop (RAF)...');
+    requestAnimationFrame(velocityPublishLoop);
+});
 
-        var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
-        goalStartCoords = { x: coords.x, y: -coords.y }; // Store in ROS coords
 
-        // Show goal marker at click position
-        goalMarker.x = coords.x;
-        goalMarker.y = coords.y;
-        goalMarker.rotation = 0;
-        goalMarker.visible = true;
-        isSettingGoal = true;
+// === MAPPING TOOLS ===
+// Use serialize_map (NOT save_map) to create .posegraph files
+// Will be initialized in initializeRosTopics()
+// var saveMapClient
+// var loadMapClient
 
-        setNavStatus('ready', 'Drag to set orientation...');
-    });
+// Save map from MANUAL mode
+const btnSaveManualMap = document.getElementById('btn-save-manual-map');
+const manualMapName = document.getElementById('manual-map-name');
+const manualSaveStatus = document.getElementById('manual-save-status');
 
-    // Mouse Move - Update orientation preview
-    viewer.scene.addEventListener('stagemousemove', function (event) {
-        if (!isSettingGoal || !goalStartCoords) return;
-
-        var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
-
-        // Calculate angle from start position to current mouse
-        var dx = coords.x - goalMarker.x;
-        var dy = coords.y - goalMarker.y;
-        var angle = Math.atan2(-dy, dx); // Negative Y for screen coords
-
-        // Update marker rotation (degrees for CreateJS)
-        goalMarker.rotation = -angle * 180 / Math.PI;
-    });
-
-    // Mouse Up - Send goal with orientation
-    viewer.scene.addEventListener('stagemouseup', function (event) {
-        if (!isSettingGoal || !goalStartCoords) return;
-
-        var coords = viewer.scene.globalToLocal(event.stageX, event.stageY);
-
-        // Calculate final orientation
-        var dx = coords.x - goalMarker.x;
-        var dy = coords.y - goalMarker.y;
-        var yaw = Math.atan2(-dy, dx); // Angle in radians
-
-        // If user didn't drag (just clicked), default to forward (0 rad)
-        var distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < 0.1) {
-            yaw = 0; // Default forward
+if (btnSaveManualMap) {
+    btnSaveManualMap.addEventListener('click', function () {
+        const name = manualMapName ? manualMapName.value.trim() : '';
+        if (!name) {
+            showDialog('Please enter a map name', 'Required');
+            return;
         }
 
-        var orientation = yawToQuaternion(yaw);
-
-        var pose = new ROSLIB.Message({
-            header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
-            pose: {
-                position: { x: goalStartCoords.x, y: goalStartCoords.y, z: 0.0 },
-                orientation: orientation
-            }
+        // SerializePoseGraph uses 'filename' not 'name'
+        var request = new ROSLIB.ServiceRequest({
+            filename: 'maps/' + name
         });
 
-        console.log("Navigation Goal:", goalStartCoords.x.toFixed(2), goalStartCoords.y.toFixed(2), "yaw:", (yaw * 180 / Math.PI).toFixed(1) + "°");
-        goalTopic.publish(pose);
-        setNavStatus('navigating', 'Navigating to goal...');
+        if (manualSaveStatus) {
+            manualSaveStatus.innerText = "Saving...";
+            manualSaveStatus.style.color = "#636E72";
+        }
 
-        // Keep goal marker visible for reference
-        isSettingGoal = false;
-        goalStartCoords = null;
-
-        // Auto-detect goal reached (fallback)
-        setTimeout(() => {
-            if (isNavigating) {
-                setNavStatus('success', 'Goal reached!');
-                goalMarker.visible = false;
+        saveMapClient.callService(request, function (result) {
+            console.log('Map saved:', result);
+            if (manualSaveStatus) {
+                manualSaveStatus.innerText = `Map "${name}" saved successfully as ${name}.posegraph!`;
+                manualSaveStatus.style.color = "var(--success)";
             }
-        }, 15000);
+            if (manualMapName) manualMapName.value = '';
+
+            // Reset unsaved changes flag
+            hasUnsavedMapChanges = false;
+
+            setTimeout(() => {
+                if (manualSaveStatus) manualSaveStatus.innerText = "";
+            }, 3000);
+        }, function (error) {
+            console.error('Save error:', error);
+            if (manualSaveStatus) {
+                manualSaveStatus.innerText = "Error saving map - Is SLAM running?";
+                manualSaveStatus.style.color = "var(--danger)";
+            }
+
+            setTimeout(() => {
+                if (manualSaveStatus) manualSaveStatus.innerText = "";
+            }, 5000);
+        });
     });
 }
 
-// Cancel Navigation
-if (cancelBtn) {
-    cancelBtn.addEventListener('click', function () {
-        if (!goalTopic) return;
+// Load Map Service Client (will be initialized in initializeRosTopics())
+// var loadMapClient
 
-        // Publish empty goal to cancel (Nav2 behavior)
-        var cancelTopic = new ROSLIB.Topic({
-            ros: ros,
-            name: '/navigate_to_pose/_action/cancel',
-            messageType: 'action_msgs/CancelGoal'
-        });
+// Old refresh buttons removed - maps load automatically in modal
 
-        // Send cancel request
-        cancelTopic.publish(new ROSLIB.Message({}));
+// === MODAL MAP MANAGEMENT ===
 
-        // Also stop the robot immediately
-        stop();
 
-        setNavStatus('ready', 'Navigation cancelled');
-        console.log("Navigation cancelled by user");
+// Modal Elements
+const mapsModal = document.getElementById('maps-modal');
+const modalClose = document.getElementById('modal-close');
+const btnManageMaps = document.getElementById('btn-manage-maps');
+const modalMapsList = document.getElementById('modal-maps-list');
+const btnModalSaveMap = document.getElementById('btn-modal-save-map');
+const modalMapName = document.getElementById('modal-map-name');
+const modalSaveStatus = document.getElementById('modal-save-status');
+
+// Debug: Log if elements are found
+console.log('Modal elements check:', {
+    mapsModal: !!mapsModal,
+    modalClose: !!modalClose,
+    btnManageMaps: !!btnManageMaps,
+    modalMapsList: !!modalMapsList
+});
+
+// Open Modal
+function showMapsModal() {
+    console.log('showMapsModal called');
+    if (!mapsModal) {
+        console.error('Modal element not found!');
+        showDialog('Error: Modal not found. Please refresh the page.', 'Error');
+        return;
+    }
+    mapsModal.style.display = 'flex';
+    loadMapsToModal();
+}
+
+// Close Modal
+function hideMapsModal() {
+    if (!mapsModal) return;
+    mapsModal.style.display = 'none';
+}
+
+// Event Listeners
+if (btnManageMaps) {
+    btnManageMaps.addEventListener('click', showMapsModal);
+    console.log('Manage Maps button event listener attached');
+} else {
+    console.error('btn-manage-maps element not found!');
+}
+
+if (modalClose) {
+    modalClose.addEventListener('click', hideMapsModal);
+} else {
+    console.error('modal-close element not found!');
+}
+
+// AUTO mode map button
+const btnManageMapsAuto = document.getElementById('btn-manage-maps-auto');
+if (btnManageMapsAuto) {
+    btnManageMapsAuto.addEventListener('click', showMapsModal);
+    console.log('AUTO mode Manage Maps button event listener attached');
+}
+
+// Close modal when clicking outside
+if (mapsModal) {
+    mapsModal.addEventListener('click', function (e) {
+        if (e.target === mapsModal) {
+            hideMapsModal();
+        }
     });
 }
 
-// Mode Switching
-const modeSwitch = document.getElementById('mode-switch');
-const manualPanel = document.getElementById('manual-panel');
-const mapPanel = document.getElementById('map-panel');
+// Load Maps into Modal
+function loadMapsToModal() {
+    if (!modalMapsList) {
+        console.error('modalMapsList element not found!');
+        return;
+    }
 
-if (modeSwitch) {
-    modeSwitch.addEventListener('change', (e) => {
-        if (e.target.checked) {
-            // Auto Mode
-            console.log("Switched to Auto Mode");
-            manualPanel.classList.add('hidden');
-            mapPanel.classList.remove('hidden');
-            initMap(); // Init map only when needed to save resources
-            setNavStatus('ready', 'Ready');
+    modalMapsList.innerHTML = '<p class="loading-message">Loading maps...</p>';
+
+    // Fetch from web server endpoint - always use the current web server (PC), not RPI
+    // Maps are stored on PC, and only PC has the /list_maps endpoint
+    const webServerHost = window.location.hostname;
+    fetch('http://' + webServerHost + ':8000/list_maps')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Maps loaded:', data);
+            if (data.maps && data.maps.length > 0) {
+                let html = '';
+                data.maps.forEach(mapName => {
+                    html += `
+                        <div class="map-item">
+                            <span class="map-item-name">
+                                <i class="fas fa-map-marked-alt"></i>
+                                ${mapName}
+                                <span class="map-format-badge">.posegraph</span>
+                            </span>
+                            <div class="map-item-actions">
+                                <button class="btn-load-map" onclick="loadMapFromModal('${mapName}')">
+                                    <i class="fas fa-download"></i> Load
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                modalMapsList.innerHTML = html;
+            } else {
+                modalMapsList.innerHTML = '<p class="loading-message">No saved maps found. Create maps in Manual mode first.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching maps:', error);
+            modalMapsList.innerHTML = '<p class="loading-message" style="color: var(--danger);">Error loading maps. Make sure web server is running.</p>';
+        });
+}
+
+// Search/Filter Maps
+const modalSearchInput = document.getElementById('modal-search-maps');
+if (modalSearchInput) {
+    modalSearchInput.addEventListener('input', function (e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const mapItems = modalMapsList.querySelectorAll('.map-item');
+
+        let visibleCount = 0;
+        mapItems.forEach(item => {
+            const mapName = item.querySelector('.map-item-name').textContent.toLowerCase();
+            if (mapName.includes(searchTerm)) {
+                item.style.display = 'flex';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Show message if no maps match
+        if (visibleCount === 0 && mapItems.length > 0) {
+            if (!document.getElementById('no-match-message')) {
+                const noMatch = document.createElement('p');
+                noMatch.id = 'no-match-message';
+                noMatch.className = 'loading-message';
+                noMatch.textContent = `No maps matching "${e.target.value}"`;
+                modalMapsList.appendChild(noMatch);
+            }
         } else {
-            // Manual Mode
-            console.log("Switched to Manual Mode");
-            manualPanel.classList.remove('hidden');
-            mapPanel.classList.add('hidden');
+            const noMatchMsg = document.getElementById('no-match-message');
+            if (noMatchMsg) noMatchMsg.remove();
         }
     });
 }
 
+// Save Map from Modal
+if (btnModalSaveMap) {
+    btnModalSaveMap.addEventListener('click', function () {
+        const name = modalMapName ? modalMapName.value.trim() : '';
+        if (!name) {
+            showDialog('Please enter a map name', 'Required');
+            return;
+        }
+
+        // SerializePoseGraph uses 'filename' not 'name'
+        var request = new ROSLIB.ServiceRequest({
+            filename: 'maps/' + name
+        });
+
+        if (modalSaveStatus) {
+            modalSaveStatus.innerText = "Saving...";
+            modalSaveStatus.style.color = "#636E72";
+        }
+
+        saveMapClient.callService(request, function (result) {
+            console.log('Map saved:', result);
+            if (modalSaveStatus) {
+                modalSaveStatus.innerText = `Map "${name}" saved successfully as ${name}.posegraph!`;
+                modalSaveStatus.style.color = "var(--success)";
+            }
+            if (modalMapName) modalMapName.value = '';
+
+            // Reset unsaved changes flag
+            hasUnsavedMapChanges = false;
+
+            // Refresh the maps list
+            setTimeout(() => {
+                loadMapsToModal();
+                if (modalSaveStatus) modalSaveStatus.innerText = "";
+            }, 2000);
+        }, function (error) {
+            console.error('Save error:', error);
+            if (modalSaveStatus) {
+                modalSaveStatus.innerText = "Error saving map";
+                modalSaveStatus.style.color = "var(--danger)";
+            }
+
+            setTimeout(() => {
+                if (modalSaveStatus) modalSaveStatus.innerText = "";
+            }, 5000);
+        });
+    });
+}
+
+// Load Map from Modal (global function for onclick)
+window.loadMapFromModal = async function (mapName) {
+    console.log('Loading map:', mapName);
+
+    // Issue 2: Prevent loading in MANUAL mode (would overlay current map)
+    if (currentMode === 'MANUAL') {
+        showDialog('⚠️ Cannot Load Map in MANUAL Mode\n\nYou are currently building a map with SLAM.\n\nTo load a saved map for navigation:\n1. Switch to IDLE or AUTO mode first\n2. Save your current work if needed\n3. Then load the map');
+        return;
+    }
+
+    // Warn if not in AUTO mode
+    if (currentMode !== 'AUTO') {
+        const proceedToAuto = await showConfirm(
+            '📍 Load Map for Navigation?\n\n' +
+            'This map will be loaded for autonomous navigation.\n\n' +
+            'Would you like to:\n' +
+            '• Click "OK" to load map and switch to AUTO mode\n' +
+            '• Click "Cancel" to stay in current mode'
+        );
+
+        if (!proceedToAuto) {
+            return;
+        }
+    }
+
+    var request = new ROSLIB.ServiceRequest({
+        filename: 'maps/' + mapName,
+        match_type: 1  // 1 = START_AT_FIRST_NODE
+    });
+
+    // Show loading state
+    if (modalMapsList) {
+        const mapItems = modalMapsList.querySelectorAll('.map-item');
+        mapItems.forEach(item => {
+            if (item.textContent.includes(mapName)) {
+                const btn = item.querySelector('.btn-load-map');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                    btn.disabled = true;
+                }
+            }
+        });
+    }
+
+    loadMapClient.callService(request, function (result) {
+        console.log('Map loaded successfully:', result);
+
+        // Set flag indicating map is loaded for navigation
+        isMapLoadedForNav = true;
+        currentLoadedMap = mapName;
+
+        // Fix for "Stacked Map": Force clear old visualizer before init new one
+        clearMapVisualization();
+
+        // Re-initialize map to create fresh grid client
+        setTimeout(() => {
+            initMap();
+        }, 300);
+
+        // Hide placeholder immediately
+        const placeholder = document.getElementById('map-placeholder');
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
+        // Switch to AUTO mode if not already there
+        if (currentMode !== 'AUTO') {
+            setMode('AUTO');
+        } else {
+            // Force pause SLAM even if already in AUTO (loading map might have reset backend)
+            toggleSlamMapping(true);
+        }
+
+        showDialog(`✅ Map "${mapName}" loaded successfully!\n\nYou are now in AUTO mode.\nSet a navigation goal to begin autonomous navigation.`, 'Map Loaded');
+        hideMapsModal();
+
+        // Wait for the /map topic to start publishing the loaded map, then re-fit the viewer
+        // Multiple attempts to handle delayed map publishing
+        setTimeout(function () {
+            console.log('Re-fitting map viewer after load (attempt 1)...');
+            fitMapToViewer();
+        }, 1000); // 1 second
+
+        setTimeout(function () {
+            console.log('Re-fitting map viewer after load (attempt 2)...');
+            fitMapToViewer();
+        }, 3000); // 3 seconds
+
+        setTimeout(function () {
+            console.log('Re-fitting map viewer after load (final attempt)...');
+            fitMapToViewer();
+        }, 5000); // 5 seconds
+    }, function (error) {
+        console.error('Load error:', error);
+        alert(`Failed to load map "${mapName}". Make sure the map files exist in the workspace directory.`);
+        loadMapsToModal(); // Reload to reset buttons
+    });
+};
